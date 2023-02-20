@@ -46,7 +46,7 @@ class FatekModbusClient:
             discrete_inputs, 
             self.client.read_multi_coils, 
             FatekToModbus.DISCRET_INPUTS, 
-            True
+            return_dict
             )
 
     def read_discrete_outputs(self, discrete_outputs: list, return_dict: bool = False):
@@ -54,7 +54,7 @@ class FatekModbusClient:
             discrete_outputs, 
             self.client.read_multi_coils, 
             FatekToModbus.DISCRET_OUTPUTS, 
-            True
+            return_dict
             )
 
     def read_discrete_mrelays(self, discrete_mrelays: list, return_dict: bool = False):
@@ -62,7 +62,7 @@ class FatekModbusClient:
             discrete_mrelays, 
             self.client.read_multi_coils, 
             FatekToModbus.DISCRET_MRELAYS, 
-            True
+            return_dict
             )
 
     def read_discrete_srelays(self, discrete_srelays: list, return_dict: bool = False):
@@ -70,7 +70,7 @@ class FatekModbusClient:
             discrete_srelays, 
             self.client.read_multi_coils, 
             FatekToModbus.DISCRET_SRELAYS, 
-            True
+            return_dict
             )
 
     def read_timers_status(self, timers: list, return_dict: bool = False):
@@ -78,7 +78,7 @@ class FatekModbusClient:
             timers, 
             self.client.read_multi_coils, 
             FatekToModbus.TIMERS_STATUS, 
-            True
+            return_dict
             )
 
     def read_counter_status(self, counters: list, return_dict: bool = False):
@@ -86,7 +86,7 @@ class FatekModbusClient:
             counters, 
             self.client.read_multi_coils, 
             FatekToModbus.COUNTERS_STATUS, 
-            True
+            return_dict
             )
 
     def read_holding_registers(self, holding_registers: list, return_dict: bool = False):
@@ -94,7 +94,7 @@ class FatekModbusClient:
             holding_registers, 
             self.client.read_multi_holding_registers, 
             FatekToModbus.HOLDING_REGISTERS, 
-            True
+            return_dict
             )
 
     def read_holding_registers_ror(self, holding_registers_ror: list, return_dict: bool = False):
@@ -102,7 +102,7 @@ class FatekModbusClient:
             holding_registers_ror, 
             self.client.read_multi_holding_registers, 
             FatekToModbus.HOLDING_REGISTERS_ROR, 
-            True
+            return_dict
             )
 
     def read_data_registers(self, data_registers: list, return_dict: bool = False):
@@ -110,7 +110,7 @@ class FatekModbusClient:
             data_registers,
             self.client.read_multi_holding_registers, 
             FatekToModbus.DATA_REGISTERS, 
-            True
+            return_dict
             )
 
     def read_timers_data(self, timers: list, return_dict: bool = False):
@@ -118,7 +118,7 @@ class FatekModbusClient:
             timers,
             self.client.read_multi_holding_registers, 
             FatekToModbus.TIMERS_DATA, 
-            True
+            return_dict
             )
 
     def read_counters_data(self, counters: list, return_dict: bool = False):
@@ -126,7 +126,7 @@ class FatekModbusClient:
             counters,
             self.client.read_multi_holding_registers, 
             FatekToModbus.COUNTERS_DATA, 
-            True
+            return_dict
             )
 
     def read_counters_32bit(self, counters_32bit: list, return_dict: bool = False):
