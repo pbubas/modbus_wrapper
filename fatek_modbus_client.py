@@ -2,7 +2,6 @@ from modbus_client_wrapper import ModbusClientWrapper
 from fatek_to_modbus import FatekToModbus
 
 
-
 class FatekModbusClient:
 
     def __init__(self, host='localhost', port=502, unit_id=1, timeout=30.0,

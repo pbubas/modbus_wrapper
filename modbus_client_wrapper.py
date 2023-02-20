@@ -5,9 +5,7 @@ from typing import List, Dict, Union
 from enum import Enum
 
 
-logging.basicConfig(stream=stdout, level=logging.DEBUG)
-LOG = logging.getLogger()
-
+LOG = logging.getLogger(__name__)
 
 
 class ModbusNumberMap(Enum):
@@ -121,9 +119,8 @@ class ModbusClientWrapper(ModbusClient):
         else:
             raise Exception("Modbus function unknown")
 
-
+    @staticmethod
     def _create_reads(
-            self, 
             addresses: List[int], 
             max_read_size: int = 1, 
             read_mask: int = 65535
@@ -139,9 +136,10 @@ class ModbusClientWrapper(ModbusClient):
                 remain_coils = addresses[i+1:]
                 for remain_coil in remain_coils:
                     prev_elemet_diff = remain_coil - addresses[i]
-                    if (prev_elemet_diff <= read_mask 
+                    if (
+                        prev_elemet_diff <= read_mask 
                         and prev_elemet_diff + 1 <= max_read_size
-                        ):
+                    ):
                             read_size = prev_elemet_diff + 1
                             done_list.add(remain_coil)
                     read_mask +=1
@@ -168,8 +166,7 @@ class ModbusClientWrapper(ModbusClient):
         address_list = [ModbusClientWrapper.get_address(number) for number in numbers]
         LOG.debug(f"{function_string} to read modbus addresses: {address_list}")
 
-
-        reads = self._create_reads(address_list, max_read_size, read_mask)
+        reads = ModbusClientWrapper._create_reads(address_list, max_read_size, read_mask)
 
         values = {}
         for read in reads:

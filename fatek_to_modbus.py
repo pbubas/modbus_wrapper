@@ -1,9 +1,20 @@
-
 class FatekToModbus:
     """
-        # 1-bit coils
-
-
+    ## 1-bit coils
+    #### Discrete outputs: Y0 - Y255
+    #### Discrete inputs: X0 - X255
+    #### Discrete relays M: M0 - M2001
+    #### Discrete relays S: S0 - S999
+    #### Timers status: T0 - T255
+    #### Counters status: C0 - C255
+    ## 16-bit registers
+    #### Holding registers: R0 - R4167
+    #### Holding registers ror: R5000 - R5998
+    #### Data registers ror: D0 - D2998
+    #### Timers data ror: T0 - T255
+    #### Counters data: C0 - C199
+    ## 32-bit registers
+    #### Counters data: C200 - C255
     """
     # 1-bit coils
     DISCRET_SRELAYS = {"S"+str(fatek_address):fatek_address+6001 for fatek_address in range(0,1000)}
