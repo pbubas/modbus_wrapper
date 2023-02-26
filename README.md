@@ -7,7 +7,7 @@ List of different types can be provided, then dict with result is returned.
 main read() function is detecting type of each address of the list and associate is to proper Modbus function.
 
 Number of each function runs is optimzed by configuring following ModbusClientWrapper class parameters:
-```
+```python
     COILS_MAX_READ_SIZE = 2000
     DISCRETE_INPUTS_MAX_READ_SIZE = 2000
     HOLDING_REGISTERS_MAX_READ_SIZE = 125
@@ -16,23 +16,22 @@ Number of each function runs is optimzed by configuring following ModbusClientWr
 
 ## Use case:
 normally to read R100, R200, Y0, Y50 and Y99, T105 values, x6 modbus queries are requred.
-```
+```python
 read_coils(0, 1)
 read_coils(50, 1)
 read_coils(99, 1)
 read_coils(9105, 1)
 read_holding_registers(100, 1)
 read_holding_registers(200, 1)
-
 ```
 
 With configured 
-```
+```python
 COILS_MAX_READ_SIZE = 100
 HOLDING_REGISTERS_MAX_READ_SIZE = 101
 ```
 read is optmized following reads:
-```
+```python
 read_coils(0, 100)
 read_coils(9105, 1)
 read_holding_resters(100, 101)
