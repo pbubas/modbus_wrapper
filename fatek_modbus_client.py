@@ -1,6 +1,11 @@
+import logging
 from modbus_client_wrapper import ModbusClientWrapper
 from fatek_to_modbus import FatekToModbus
 
+LOG = logging.getLogger(__name__)
+
+class FatekAddressValidationError(Exception):
+    pass
 
 class FatekModbusClient:
 
@@ -16,29 +21,79 @@ class FatekModbusClient:
             COUNTERS_DATA -> read_counters_data()
             COUNTERS_32BIT -> read_counters_32bit()
         """
+        
+        discrete_inputs = list()
+        discrete_outputs = list()
+        discrete_mrelays = list()
+        discrete_srelays = list()
+        timers = list()
+        counters = list()
+        holding_registers = list()
+        holding_registers_ror = list()
+        data_registers = list()
 
-        discrete_inputs = [address for address in fatek_addresses if address in FatekToModbus.DISCRET_INPUTS.keys()]
-        discrete_outputs = [address for address in fatek_addresses if address in FatekToModbus.DISCRET_OUTPUTS.keys()]
-        discrete_mrelays = [address for address in fatek_addresses if address in FatekToModbus.DISCRET_MRELAYS.keys()]
-        discrete_srelays = [address for address in fatek_addresses if address in FatekToModbus.DISCRET_SRELAYS.keys()]
-        timers = [address for address in fatek_addresses if address in FatekToModbus.TIMERS_STATUS.keys()]
-        counters = [address for address in fatek_addresses if address in FatekToModbus.COUNTERS_STATUS.keys()]
 
-        holding_registers = [address for address in fatek_addresses if address in FatekToModbus.HOLDING_REGISTERS.keys()]
-        holding_registers_ror = [address for address in fatek_addresses if address in FatekToModbus.HOLDING_REGISTERS_ROR.keys()]
-        data_registers = [address for address in fatek_addresses if address in FatekToModbus.DATA_REGISTERS.keys()]
+        for address in fatek_addresses:
+            if address in FatekToModbus.DISCRET_INPUTS.keys():
+                discrete_inputs.append(address)
 
-        return (
-            self.read_discrete_inputs(discrete_inputs, True) |
-            self.read_discrete_outputs(discrete_outputs, True) |
-            self.read_discrete_mrelays(discrete_mrelays, True) |
-            self.read_discrete_srelays(discrete_srelays, True) |
-            self.read_timers_status(timers, True) |
-            self.read_counter_status(counters, True) |
-            self.read_holding_registers(holding_registers, True) |
-            self.read_holding_registers_ror(holding_registers_ror, True) |
-            self.read_data_registers(data_registers, True)
-        )
+            elif address in FatekToModbus.DISCRET_OUTPUTS.keys():
+                discrete_outputs.append(address)
+
+            elif address in FatekToModbus.DISCRET_MRELAYS.keys():
+                discrete_mrelays.append(address)
+
+            elif address in FatekToModbus.DISCRET_SRELAYS.keys():
+                discrete_srelays.append(address)
+            
+            elif address in FatekToModbus.TIMERS_STATUS.keys():
+                timers.append(address)
+
+            elif address in FatekToModbus.COUNTERS_STATUS.keys():
+                counters.append(address)
+
+            elif address in FatekToModbus.HOLDING_REGISTERS.keys():
+                holding_registers.append(address)
+
+            elif address in FatekToModbus.HOLDING_REGISTERS_ROR.keys():
+                holding_registers_ror.append(address)
+
+            elif address in FatekToModbus.DATA_REGISTERS.keys():
+                data_registers.append(address)
+            
+            else:
+                raise FatekAddressValidationError(f'address {address} not recgnized as Fatek address')
+
+        result = {}
+        
+        if discrete_inputs:
+            result = result | self.read_discrete_inputs(discrete_inputs, True)
+
+        if discrete_outputs:
+            result = result | self.read_discrete_outputs(discrete_outputs, True)
+
+        if discrete_mrelays:
+            result = result | self.read_discrete_mrelays(discrete_mrelays, True)
+
+        if discrete_srelays:
+            result = result | self.read_discrete_srelays(discrete_srelays, True)
+
+        if timers:
+            result = result | self.read_timers_status(timers, True)
+
+        if counters:
+            result = result | self.read_counter_status(counters, True)
+
+        if holding_registers:
+            result = result | self.read_holding_registers(holding_registers, True)
+
+        if holding_registers_ror:
+            result = result | self.read_holding_registers_ror(holding_registers_ror, True)
+
+        if data_registers:
+            result = result | self.read_data_registers(data_registers, True)
+
+        return result
 
     def read_discrete_inputs(self, discrete_inputs: list, return_dict: bool = False):
 
@@ -132,10 +187,25 @@ class FatekModbusClient:
     def read_counters_32bit(self, counters_32bit: list, return_dict: bool = False):
         pass
 
+    def write_multiple_registers(self, first_register: str, register_values: list):
+
+        try:
+            register_as_modbus = FatekToModbus.REG_16BIT[first_register]
+        except KeyError:
+            raise FatekAddressValidationError(f'register {first_register} not recgnized as Fatek register')
+        
+        return self.client.write_multiple_registers(register_as_modbus, register_values)
+
     def _read_main(self, fatek_addresses: list(), function, fatek_type: dict(), return_dict: bool = False):
-        modbus_numbers = [fatek_type[address] for address in fatek_addresses]
+        try:
+            modbus_numbers = [fatek_type[address] for address in fatek_addresses]
+        except KeyError as e:
+            error_message = f'address {str(e)} not recgnized as Fatek address'
+            raise FatekAddressValidationError(error_message)
 
         read_mask = len(fatek_type.keys())
+
+        self.client.open()
         modbus_values = function(modbus_numbers, read_mask=read_mask)
 
         if return_dict:
