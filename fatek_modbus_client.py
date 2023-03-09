@@ -188,7 +188,6 @@ class FatekModbusClient:
         pass
 
     def write_multiple_registers(self, first_register: str, register_values: list):
-
         try:
             register_as_modbus = FatekToModbus.REG_16BIT[first_register]
         except KeyError:
