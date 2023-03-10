@@ -42,20 +42,21 @@ class FatekList:
     def __init__(self, fatek_list: list):
         self.fatek_list = [FatekAddress(entry) for entry in fatek_list]
 
+    def _get_types(self, fatek_type: str):
+        fatek_list = self.fatek_list
+        return [entry for entry in fatek_list if entry.type == fatek_type]
+
     @property
     def discret_inputs(self):
-        fatek_list = self.fatek_list
-        return [entry.address for entry in fatek_list if entry.type == "discret_inputs"]
+        return self._get_types("discret_inputs")
     
     @property
     def discret_outputs(self):
-        fatek_list = self.fatek_list
-        return [entry.address for entry in fatek_list if entry.type == "discret_outputs"]
+        return self._get_types("discret_outputs")
     
     @property
     def holding_registers(self):
-        fatek_list = self.fatek_list
-        return [entry.address for entry in fatek_list if entry.type == "holding_registers"]
+        return self._get_types("holding_registers")
         
         
     @staticmethod
