@@ -1,6 +1,6 @@
 import logging
 from modbus_client_wrapper import ModbusClientWrapper
-from fatek_to_modbus import FatekToModbus
+from fatek_address import FatekAddress
 
 LOG = logging.getLogger(__name__)
 
@@ -34,31 +34,31 @@ class FatekModbusClient:
 
 
         for address in fatek_addresses:
-            if address in FatekToModbus.DISCRET_INPUTS.keys():
+            if address in FatekAddress.DISCRET_INPUTS.keys():
                 discrete_inputs.append(address)
 
-            elif address in FatekToModbus.DISCRET_OUTPUTS.keys():
+            elif address in FatekAddress.DISCRET_OUTPUTS.keys():
                 discrete_outputs.append(address)
 
-            elif address in FatekToModbus.DISCRET_MRELAYS.keys():
+            elif address in FatekAddress.DISCRET_MRELAYS.keys():
                 discrete_mrelays.append(address)
 
-            elif address in FatekToModbus.DISCRET_SRELAYS.keys():
+            elif address in FatekAddress.DISCRET_SRELAYS.keys():
                 discrete_srelays.append(address)
             
-            elif address in FatekToModbus.TIMERS_STATUS.keys():
+            elif address in FatekAddress.TIMERS_STATUS.keys():
                 timers.append(address)
 
-            elif address in FatekToModbus.COUNTERS_STATUS.keys():
+            elif address in FatekAddress.COUNTERS_STATUS.keys():
                 counters.append(address)
 
-            elif address in FatekToModbus.HOLDING_REGISTERS.keys():
+            elif address in FatekAddress.HOLDING_REGISTERS.keys():
                 holding_registers.append(address)
 
-            elif address in FatekToModbus.HOLDING_REGISTERS_ROR.keys():
+            elif address in FatekAddress.HOLDING_REGISTERS_ROR.keys():
                 holding_registers_ror.append(address)
 
-            elif address in FatekToModbus.DATA_REGISTERS.keys():
+            elif address in FatekAddress.DATA_REGISTERS.keys():
                 data_registers.append(address)
             
             else:
@@ -100,7 +100,7 @@ class FatekModbusClient:
         return self._read_main(
             discrete_inputs, 
             self.client.read_multi_coils, 
-            FatekToModbus.DISCRET_INPUTS, 
+            FatekAddress.DISCRET_INPUTS, 
             return_dict
             )
 
@@ -108,7 +108,7 @@ class FatekModbusClient:
         return self._read_main(
             discrete_outputs, 
             self.client.read_multi_coils, 
-            FatekToModbus.DISCRET_OUTPUTS, 
+            FatekAddress.DISCRET_OUTPUTS, 
             return_dict
             )
 
@@ -116,7 +116,7 @@ class FatekModbusClient:
         return self._read_main(
             discrete_mrelays, 
             self.client.read_multi_coils, 
-            FatekToModbus.DISCRET_MRELAYS, 
+            FatekAddress.DISCRET_MRELAYS, 
             return_dict
             )
 
@@ -124,7 +124,7 @@ class FatekModbusClient:
         return self._read_main(
             discrete_srelays, 
             self.client.read_multi_coils, 
-            FatekToModbus.DISCRET_SRELAYS, 
+            FatekAddress.DISCRET_SRELAYS, 
             return_dict
             )
 
@@ -132,7 +132,7 @@ class FatekModbusClient:
         return self._read_main(
             timers, 
             self.client.read_multi_coils, 
-            FatekToModbus.TIMERS_STATUS, 
+            FatekAddress.TIMERS_STATUS, 
             return_dict
             )
 
@@ -140,7 +140,7 @@ class FatekModbusClient:
         return self._read_main(
             counters, 
             self.client.read_multi_coils, 
-            FatekToModbus.COUNTERS_STATUS, 
+            FatekAddress.COUNTERS_STATUS, 
             return_dict
             )
 
@@ -148,7 +148,7 @@ class FatekModbusClient:
         return self._read_main(
             holding_registers, 
             self.client.read_multi_holding_registers, 
-            FatekToModbus.HOLDING_REGISTERS, 
+            FatekAddress.HOLDING_REGISTERS, 
             return_dict
             )
 
@@ -156,7 +156,7 @@ class FatekModbusClient:
         return self._read_main(
             holding_registers_ror, 
             self.client.read_multi_holding_registers, 
-            FatekToModbus.HOLDING_REGISTERS_ROR, 
+            FatekAddress.HOLDING_REGISTERS_ROR, 
             return_dict
             )
 
@@ -164,7 +164,7 @@ class FatekModbusClient:
         return self._read_main(
             data_registers,
             self.client.read_multi_holding_registers, 
-            FatekToModbus.DATA_REGISTERS, 
+            FatekAddress.DATA_REGISTERS, 
             return_dict
             )
 
@@ -172,7 +172,7 @@ class FatekModbusClient:
         return self._read_main(
             timers,
             self.client.read_multi_holding_registers, 
-            FatekToModbus.TIMERS_DATA, 
+            FatekAddress.TIMERS_DATA, 
             return_dict
             )
 
@@ -180,7 +180,7 @@ class FatekModbusClient:
         return self._read_main(
             counters,
             self.client.read_multi_holding_registers, 
-            FatekToModbus.COUNTERS_DATA, 
+            FatekAddress.COUNTERS_DATA, 
             return_dict
             )
 
@@ -189,7 +189,7 @@ class FatekModbusClient:
 
     def write_multiple_registers(self, first_register: str, register_values: list):
         try:
-            register_as_modbus = FatekToModbus.REG_16BIT[first_register]
+            register_as_modbus = FatekAddress.REG_16BIT[first_register]
         except KeyError:
             raise FatekAddressValidationError(f'register {first_register} not recgnized as Fatek register')
         
@@ -211,3 +211,8 @@ class FatekModbusClient:
             dict_to_return =  dict(zip(fatek_addresses, modbus_values))
             return dict_to_return
         return modbus_values
+
+
+
+
+
