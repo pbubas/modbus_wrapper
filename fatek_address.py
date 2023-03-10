@@ -59,10 +59,17 @@ class FatekList:
         
         
     @staticmethod
-    def convert_range(read_range: str):
-        read_range = read_range.split("-")
-        start_address = read_range[0]
-        end_address = read_range[1]
+    def convert_range(fatek_range: str):
+
+        fatek_range = fatek_range.split("-")
+
+        address_prefix = fatek_range[0][:1]
+        start_address = int(fatek_range[0][1:])
+        end_address = int(fatek_range[1]) + 1
+
+        address_range = list(range(start_address, end_address))
+
+        return [address_prefix + str(address) for address in address_range]
 
 
 
