@@ -161,7 +161,7 @@ class ModbusClientWrapper(ModbusClient):
         function_string = function.__doc__.splitlines()[0]
 
         if len(set(numbers)) != len(numbers):
-            return Exception("provided list contains duplicates")
+            raise Exception("provided list contains duplicates")
         
         LOG.debug(f"{function_string} to read modbus numbers: {numbers}")
 
