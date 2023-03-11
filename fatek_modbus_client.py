@@ -5,32 +5,30 @@ from typing import Set
 
 LOG = logging.getLogger(__name__)
 
-class FatekAddressValidationError(Exception):
-    pass
 
-class FatekModbusClient:
+class FatekModbusClient(ModbusClientWrapper):
 
     def __init__(self, host='localhost', port=502, unit_id=1, timeout=30.0,
                  debug=False, auto_open=True, auto_close=False):
-        self.client = ModbusClientWrapper(host, port, unit_id, timeout,
+        super().__init__(host, port, unit_id, timeout,
                  debug, auto_open, auto_close)
         
         self.type_to_function = {
-            "discret_srelays": self.read_discrete_inputs,
-            "discret_mrelays": self.read_discrete_mrelays,
-            "discret_inputs" : self.read_discrete_inputs,
-            "discret_outputs" : self.read_discrete_outputs,
-            "timers_status" : self.read_timers_status,
-            "counters_status" : self.read_counter_status,
-            "holding_registers" : self.read_holding_registers,
-            "holding_registers_ror" : self.read_holding_registers_ror,
-            "data_registers" : self.read_data_registers,
-            "timers" : self.read_timers_data,
-            "counters" : self.read_counters_data,
+            "discret_srelays": self.read_multi_coils,
+            "discret_mrelays": self.read_multi_coils,
+            "discret_inputs" : self.read_multi_coils,
+            "discret_outputs" : self.read_multi_coils,
+            "timers_status" : self.read_multi_coils,
+            "counters_status" : self.read_multi_coils,
+            "holding_registers" : self.read_multi_holding_registers,
+            "holding_registers_ror" : self.read_multi_holding_registers,
+            "data_registers" : self.read_multi_holding_registers,
+            "timers" : self.read_multi_holding_registers,
+            "counters" : self.read_multi_holding_registers,
             "counters_32bit" : self.read_counters_32bit,
          }
 
-    def read(self, fatek_addresses: list) -> dict():
+    def read(self, fatek_addresses: list, *args, **kwargs) -> dict():
 
         fatek_by_type = FatekByType(fatek_addresses)
 
@@ -38,87 +36,9 @@ class FatekModbusClient:
 
         for type, values in fatek_by_type.data.items():
             read_function = self.type_to_function[type]
-            result = result | read_function(values, True) 
+            result = result | self._read_main(values, read_function, True, *args, **kwargs)
         
         return result
-    
-    def read_discrete_inputs(self, discrete_inputs: FatekList, return_dict: bool = False):
-
-        return self._read_main(
-            discrete_inputs, 
-            self.client.read_multi_coils, 
-            return_dict
-            )
-
-    def read_discrete_outputs(self, discrete_outputs:  FatekList, return_dict: bool = False):
-        return self._read_main(
-            discrete_outputs, 
-            self.client.read_multi_coils, 
-            return_dict
-            )
-
-    def read_discrete_mrelays(self, discrete_mrelays: FatekList, return_dict: bool = False):
-        return self._read_main(
-            discrete_mrelays, 
-            self.client.read_multi_coils, 
-            return_dict
-            )
-
-    def read_discrete_srelays(self, discrete_srelays: FatekList, return_dict: bool = False):
-        return self._read_main(
-            discrete_srelays, 
-            self.client.read_multi_coils, 
-            return_dict
-            )
-
-    def read_timers_status(self, timers: FatekList, return_dict: bool = False):
-        return self._read_main(
-            timers, 
-            self.client.read_multi_coils, 
-            return_dict
-            )
-
-    def read_counter_status(self, counters: FatekList, return_dict: bool = False):
-        return self._read_main(
-            counters, 
-            self.client.read_multi_coils, 
-            return_dict
-            )
-
-    def read_holding_registers(self, holding_registers: FatekList, return_dict: bool = False):
-        return self._read_main(
-            holding_registers, 
-            self.client.read_multi_holding_registers, 
-            return_dict
-            )
-
-    def read_holding_registers_ror(self, holding_registers_ror: FatekList, return_dict: bool = False):
-        return self._read_main(
-            holding_registers_ror, 
-            self.client.read_multi_holding_registers, 
-            return_dict
-            )
-
-    def read_data_registers(self, data_registers: FatekList, return_dict: bool = False):
-        return self._read_main(
-            data_registers,
-            self.client.read_multi_holding_registers, 
-            return_dict
-            )
-
-    def read_timers_data(self, timers: FatekList, return_dict: bool = False):
-        return self._read_main(
-            timers,
-            self.client.read_multi_holding_registers, 
-            return_dict
-            )
-
-    def read_counters_data(self, counters: FatekList, return_dict: bool = False):
-        return self._read_main(
-            counters,
-            self.client.read_multi_holding_registers, 
-            return_dict
-            )
 
     def read_counters_32bit(self, counters_32bit: FatekList, return_dict: bool = False):
         pass
@@ -131,7 +51,7 @@ class FatekModbusClient:
 
         read_mask = type_size if type_size else read_mask
 
-        self.client.open()
+        self.open()
         modbus_values = function(modbus_numbers, read_mask=read_mask)
 
         if return_dict:
