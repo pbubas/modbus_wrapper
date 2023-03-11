@@ -63,7 +63,15 @@ class FatekList(list):
 class FatekByType(list):
     def __init__ (self, fatek_list: list):
 
-        fatek_list = [FatekAddress(entry) for entry in fatek_list]
+        _fatek_list = []
+        for entry in fatek_list:
+            if "-" in entry:
+                _fatek_list = _fatek_list + (self.convert_range(entry))
+            else:
+                _fatek_list.append(entry)
+
+        fatek_list = [FatekAddress(entry) for entry in _fatek_list]
+
         super().__init__(fatek_list)
 
         all_types = {entry.type for entry in self}
@@ -78,8 +86,7 @@ class FatekByType(list):
     def data(self):
         return self.__dict__
     
-    @staticmethod
-    def convert_range(fatek_range: str):
+    def convert_range(self, fatek_range: str):
 
         fatek_range = fatek_range.split("-")
 
