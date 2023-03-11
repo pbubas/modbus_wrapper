@@ -1,4 +1,6 @@
 import fatek_mapping 
+from typing import List
+
 
 class FatekAddress:
     
@@ -36,25 +38,46 @@ class FatekAddress:
             address_type for address_type, values in modbus_map.items() if address in values.keys()
             )
 
+
+class FatekList(list):
+
+    def __init__ (self, fatek_list: List[FatekAddress]):
+        super().__init__(fatek_list)
+
+    @property
+    def modbus_numbers(self):
+        return [i.modbus_number for i in self]
+    
+    @property
+    def addresses(self):
+        return [i.address for i in self]
+    
+    @property
+    def type_size(self):
+        all_types = {i.type for i in self}
+        if len(all_types) == 1:
+            type = next(i for i in all_types)
+            return len(fatek_mapping.MAP[type])
     
 
-class FatekList(set):
+class FatekByType(list):
+    def __init__ (self, fatek_list: list):
 
-    def __init__ (self, fatek_list: set):
-        fatek_list = {FatekAddress(entry) for entry in fatek_list}
+        fatek_list = [FatekAddress(entry) for entry in fatek_list]
         super().__init__(fatek_list)
 
         all_types = {entry.type for entry in self}
-        self.types = {}
+        
         for type in all_types:
-            self.types[type] = self._get_types(type)
+            self.__dict__[type] = self._get_types(type)
             
-
     def _get_types(self, fatek_type: str):
-        return {entry for entry in self if entry.type == fatek_type}
-
-        
-        
+        return FatekList([entry for entry in self if entry.type == fatek_type])
+    
+    @property
+    def data(self):
+        return self.__dict__
+    
     @staticmethod
     def convert_range(fatek_range: str):
 
@@ -67,7 +90,6 @@ class FatekList(set):
         address_range = list(range(start_address, end_address))
 
         return [address_prefix + str(address) for address in address_range]
-
 
 
 

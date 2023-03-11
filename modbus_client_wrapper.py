@@ -123,7 +123,7 @@ class ModbusClientWrapper(ModbusClient):
     def _create_reads(
             addresses: List[int], 
             max_read_size: int = 1, 
-            read_mask: int = 65535
+            read_mask: int = 1
             ) -> List[List[int]]:
         coils_read = []
         done_list = set()
@@ -134,15 +134,17 @@ class ModbusClientWrapper(ModbusClient):
 
                 read_size = 1
                 remain_coils = addresses[i+1:]
+                _read_mask = read_mask
                 for remain_coil in remain_coils:
                     prev_elemet_diff = remain_coil - addresses[i]
                     if (
-                        prev_elemet_diff <= read_mask 
+                        prev_elemet_diff <= _read_mask 
                         and prev_elemet_diff + 1 <= max_read_size
                     ):
                             read_size = prev_elemet_diff + 1
                             done_list.add(remain_coil)
-                    read_mask +=1
+                    _read_mask +=1
+
 
                 coils_read.append([addresses[i], read_size])
 
@@ -153,7 +155,7 @@ class ModbusClientWrapper(ModbusClient):
             numbers, 
             function, 
             max_read_size: int = 1, 
-            read_mask: int = 65535, 
+            read_mask: int = 1, 
             return_dict: bool = False
             ):
         function_string = function.__doc__.splitlines()[0]
