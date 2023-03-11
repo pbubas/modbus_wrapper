@@ -38,26 +38,21 @@ class FatekAddress:
 
     
 
-class FatekList(tuple):
+class FatekList(set):
 
-    def __new__ (cls, fatek_list: tuple):
-        fatek_list = (FatekAddress(entry) for entry in fatek_list)
-        return super().__new__(cls, fatek_list)
+    def __init__ (self, fatek_list: set):
+        fatek_list = {FatekAddress(entry) for entry in fatek_list}
+        super().__init__(fatek_list)
+
+        all_types = {entry.type for entry in self}
+        self.types = {}
+        for type in all_types:
+            self.types[type] = self._get_types(type)
+            
 
     def _get_types(self, fatek_type: str):
-        return tuple(entry for entry in self if entry.type == fatek_type)
+        return {entry for entry in self if entry.type == fatek_type}
 
-    @property
-    def discret_inputs(self):
-        return self._get_types("discret_inputs")
-    
-    @property
-    def discret_outputs(self):
-        return self._get_types("discret_outputs")
-    
-    @property
-    def holding_registers(self):
-        return self._get_types("holding_registers")
         
         
     @staticmethod
