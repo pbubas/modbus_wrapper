@@ -3,16 +3,20 @@ from sys import stdout
 from pyModbusTCP.client import ModbusClient
 from typing import List, Dict, Union
 from enum import Enum
+from modbus_functions_map import (
+        READ_COILS,
+        READ_HOLDING_REGISTERS,
+        READ_DISCRETE_INPUTS,
+        READ_INPUT_REGISTERS,
+        WRITE_SINGLE_COIL,
+        WRITE_SINGLE_HOLDING_REGISTER,
+        WRITE_MULTIPLE_COILS,
+        WRITE_MULTIPLE_HOLDING_REGISTERS,
+)
+from modbus_address import ModbusListByType, ModbusAddress
 
 
 LOG = logging.getLogger(__name__)
-
-
-class ModbusNumberMap(Enum):
-    COILS = 0
-    DISCRETE_INPUTS = 1
-    HOLDING_REGISTERS = 4 #function 0x03 (read holding registers)
-    INPUT_REGISTERS = 3 #function 0x04 (read input registers)
 
 
 class ModbusClientWrapper(ModbusClient):
@@ -26,33 +30,41 @@ class ModbusClientWrapper(ModbusClient):
                  debug=False, auto_open=True, auto_close=False):
         super().__init__(host, port, unit_id, timeout,
                  debug, auto_open, auto_close)
+        
+        self.function_map = {
+            READ_COILS: self.read_multi_coils,
+            READ_HOLDING_REGISTERS: self.read_multi_holding_registers,
+            READ_DISCRETE_INPUTS: self.read_discrete_inputs,
+            READ_INPUT_REGISTERS: self.read_multi_input_registers,
+            WRITE_SINGLE_COIL: self.write_single_coil,
+            WRITE_SINGLE_HOLDING_REGISTER: self.write_single_register,
+            WRITE_MULTIPLE_COILS: self.write_multiple_coils,
+            WRITE_MULTIPLE_HOLDING_REGISTERS: self.write_multiple_registers
+         }
 
     def read(self, modbus_number_list: list) -> Dict[int, Union[bool, int, None]]: 
-        coils_read_list = [
-            number for number in modbus_number_list if ModbusClientWrapper.get_function(number) == ModbusNumberMap.COILS.name
-            ]
-        discrete_input_read_list = [
-            number for number in modbus_number_list if ModbusClientWrapper.get_function(number) == ModbusNumberMap.DISCRETE_INPUTS.name
-            ]
-        holding_registers_read_list = [
-            number for number in modbus_number_list if ModbusClientWrapper.get_function(number) == ModbusNumberMap.HOLDING_REGISTERS.name
-            ]
-        input_registers_read_list = [
-            number for number in modbus_number_list if ModbusClientWrapper.get_function(number) == ModbusNumberMap.INPUT_REGISTERS.name
-            ]
+
+        modbus_number_list = ModbusListByType(modbus_number_list)
+
+        result = {}
+
+        for values in modbus_number_list.data.values():
+            read_function = self.function_map[values.function.read]
+            result = result | read_function(values.numbers, return_dict=True)
         
-        LOG.debug(f"found coils: {coils_read_list}")
-        LOG.debug(f"found discrete_input: {discrete_input_read_list}")
-        LOG.debug(f"found holding_registers: {holding_registers_read_list}")
-        LOG.debug(f"found input registers: {input_registers_read_list}")
+        return result
+    
+    def write(self, modbus_numbers_to_write: dict):
+        modbus_number_list = ModbusListByType(list(modbus_numbers_to_write.keys()))
+        for values in modbus_number_list.data.values():
+            write_function = self.function_map[values.function.write]
+            multi_write_function = self.function_map[values.function.multi_write]
+            print (self._create_reads(values.addresses, max_read_size=self.HOLDING_REGISTERS_MAX_READ_SIZE))
 
-        coils_read_list_values = self.read_multi_coils(coils_read_list, return_dict=True)
-        discrete_inputs_list_values = self.read_multi_discrete_inputs(discrete_input_read_list, return_dict=True)
-        holding_registers_read_list_values = self.read_multi_holding_registers(holding_registers_read_list, return_dict=True)
-        input_registers_read_list_values = self.read_multi_input_registers(input_registers_read_list, return_dict=True)
-
-        return coils_read_list_values | discrete_inputs_list_values | holding_registers_read_list_values | input_registers_read_list_values
-
+    def _create_writes(self, modbus_numbers_to_write: dict):
+        self._create_reads(values.addresses, max_read_size=self.HOLDING_REGISTERS_MAX_READ_SIZE)
+        pass
+        
 
     def read_multi_coils(self, coils_numbers: List[int], *args, **kwargs) -> Union[List[bool], Dict[int, bool]]:
 
@@ -94,32 +106,6 @@ class ModbusClientWrapper(ModbusClient):
             )
     
     @staticmethod
-    def get_address(number):
-        number_in_string = str(number)
-        if 65536 >= number >= 1:
-            address = number - 1
-            return address
-        else:
-            number_without_function = int(number_in_string[1:])
-            address = number_without_function - 1
-            return address
-
-    @staticmethod
-    def get_function(number: int):
-        number_in_string = str(number)
-        function_number = int(number_in_string[0])
-        if 65536 >= number >= 1:
-            return ModbusNumberMap.COILS.name
-        elif function_number == ModbusNumberMap.DISCRETE_INPUTS.value:
-            return ModbusNumberMap.DISCRETE_INPUTS.name
-        elif function_number == ModbusNumberMap.HOLDING_REGISTERS.value:
-            return ModbusNumberMap.HOLDING_REGISTERS.name
-        elif function_number == ModbusNumberMap.INPUT_REGISTERS.value:
-            return ModbusNumberMap.INPUT_REGISTERS.name
-        else:
-            raise Exception("Modbus function unknown")
-
-    @staticmethod
     def _create_reads(
             addresses: List[int], 
             max_read_size: int = 1, 
@@ -150,6 +136,10 @@ class ModbusClientWrapper(ModbusClient):
 
         return coils_read
 
+    def check_duplicates(self, list_to_check):
+        if len(set(list_to_check)) != len(list_to_check):
+            raise Exception("provided list contains duplicates")
+
     def _read_multi(
             self, 
             numbers, 
@@ -159,17 +149,17 @@ class ModbusClientWrapper(ModbusClient):
             return_dict: bool = False
             ):
         function_string = function.__doc__.splitlines()[0]
-
-        if len(set(numbers)) != len(numbers):
-            raise Exception("provided list contains duplicates")
         
+        self.check_duplicates(numbers)
+
         LOG.debug(f"{function_string} to read modbus numbers: {numbers}")
 
-        address_list = [ModbusClientWrapper.get_address(number) for number in numbers]
+        address_list = [ModbusAddress.get_address(number) for number in numbers]
         LOG.debug(f"{function_string} to read modbus addresses: {address_list}")
 
         reads = ModbusClientWrapper._create_reads(address_list, max_read_size, read_mask)
 
+        self.open()
         values = {}
         for read in reads:
             values[read[0]] = function(*read)

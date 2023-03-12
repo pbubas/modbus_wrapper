@@ -1,6 +1,6 @@
 import fatek_mapping
 from typing import List, Union
-from modbus_client_wrapper import ModbusClientWrapper
+from modbus_address import ModbusAddress
 
 
 class FatekAddressValidationException(Exception):
@@ -25,7 +25,7 @@ class FatekAddress:
         else:
             self.fatek_address = fatek_address
             self.modbus_number =  fatek_type.address_map[fatek_address]
-            self.modbus_address = ModbusClientWrapper.get_address(self.modbus_number)
+            self.modbus_address = ModbusAddress.get_address(self.modbus_number)
             self.modbus_read_function_code = fatek_type.read_function
             self.modbus_write_function_code = fatek_type.write_function
             self.modbus_multi_write_function_code = fatek_type.multi_write_function

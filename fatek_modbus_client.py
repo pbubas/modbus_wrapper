@@ -61,7 +61,6 @@ class FatekModbusClient(ModbusClientWrapper):
         else:
             function = self.function_map[fatek_address.modbus_write_function_code]
 
-        self.open()
         return function(modbus_address, value)
 
 
