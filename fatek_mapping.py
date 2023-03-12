@@ -1,3 +1,13 @@
+from modbus_functions_map import (
+        READ_COILS,
+        READ_HOLDING_REGISTERS,
+        WRITE_SINGLE_COIL,
+        WRITE_SINGLE_HOLDING_REGISTER,
+        WRITE_MULTIPLE_COILS,
+        WRITE_MULTIPLE_HOLDING_REGISTERS,
+)
+from dataclasses import dataclass
+
 __doc__ = """
 ## 1-bit coils
 #### Discrete outputs: Y0 - Y255
@@ -15,7 +25,8 @@ __doc__ = """
 ## 32-bit registers
 #### Counters data: C200 - C255
 """
-MAP = {
+
+FATEK_TO_MODBUS_MAP = {
     # 1-bit coils
     "discret_srelays" : {"S"+str(fatek_address):fatek_address+6001 for fatek_address in range(0,1000)},
     "discret_mrelays" : {"M"+str(fatek_address):fatek_address+2001 for fatek_address in range(0,2002)},
@@ -36,75 +47,94 @@ MAP = {
         }
 }
 
-COILS = (
-        MAP["discret_inputs"] | MAP["discret_outputs"] | 
-        MAP["discret_srelays"] | MAP["discret_mrelays"] |
-        MAP["timers_status"] | MAP["counters_status"]
-    )
+@dataclass
+class FatekType:
+    name: str
+    read_function: int
+    write_function: int = None
+    multi_write_function: int = None
 
-REG_16BIT = (
-    MAP["holding_registers"] | MAP["holding_registers_ror"] |
-    MAP["data_registers"] |
-    MAP["timers"] | MAP["counters"]
-    )
-
-REG_32BIT = (
-        MAP["counters_32bit"]
-    )
+    def __post_init__(self):
+        self.address_map = FATEK_TO_MODBUS_MAP[self.name]
+        self.type_size = len(FATEK_TO_MODBUS_MAP[self.name].values())
 
 
-ALL = COILS | REG_16BIT | REG_32BIT
+FATEK_TYPES = [
+        FatekType(
+                'holding_registers',
+                READ_HOLDING_REGISTERS,
+                WRITE_SINGLE_HOLDING_REGISTER,
+                WRITE_MULTIPLE_HOLDING_REGISTERS,
+        ),
 
-READ_COILS = 0x01
-READ_MULTIPLE_HOLDING_REGISTERS = 0x03
+        FatekType(
+                "discret_mrelays",
+                READ_COILS,
+                WRITE_SINGLE_COIL,
+                WRITE_MULTIPLE_COILS,
+        ),
 
-MODBUS_READ_FUNCTION_CODES = {
-        "discret_srelays": READ_COILS,
-        "discret_mrelays": READ_COILS,
-        "discret_inputs" : READ_COILS,
-        "discret_outputs" : READ_COILS,
-        "timers_status" : READ_COILS,
-        "counters_status" : READ_COILS,
-        "holding_registers" : READ_MULTIPLE_HOLDING_REGISTERS,
-        "holding_registers_ror" : READ_MULTIPLE_HOLDING_REGISTERS,
-        "data_registers" : READ_MULTIPLE_HOLDING_REGISTERS,
-        "timers" : READ_MULTIPLE_HOLDING_REGISTERS,
-        "counters" : READ_MULTIPLE_HOLDING_REGISTERS,
-        "counters_32bit" : READ_MULTIPLE_HOLDING_REGISTERS,
-}
+        FatekType(
+                'discret_inputs',
+                READ_COILS,
+                WRITE_SINGLE_COIL,
+                WRITE_MULTIPLE_COILS,
+        ),
 
-WRITE_SINGLE_COIL = 0x05
-WRITE_SINGLE_HOLDING_REGISTER = 0x06
+        FatekType(
+                'discret_outputs',
+                READ_COILS,
+                WRITE_SINGLE_COIL,
+                WRITE_MULTIPLE_COILS,
+        ),
 
-MODBUS_WRITE_FUNCTION_CODES = {
-        "discret_srelays": WRITE_SINGLE_COIL,
-        "discret_mrelays": WRITE_SINGLE_COIL,
-        "discret_inputs" : WRITE_SINGLE_COIL,
-        "discret_outputs" : WRITE_SINGLE_COIL,
-        "timers_status" : WRITE_SINGLE_COIL,
-        "counters_status" : WRITE_SINGLE_COIL,
-        "holding_registers" : WRITE_SINGLE_HOLDING_REGISTER,
-        "holding_registers_ror" : WRITE_SINGLE_HOLDING_REGISTER,
-        "data_registers" : WRITE_SINGLE_HOLDING_REGISTER,
-        "timers" : WRITE_SINGLE_HOLDING_REGISTER,
-        "counters" : WRITE_SINGLE_HOLDING_REGISTER,
-        "counters_32bit" : WRITE_SINGLE_HOLDING_REGISTER,
-}
+         FatekType(
+                'data_registers',
+                READ_HOLDING_REGISTERS,
+                WRITE_SINGLE_HOLDING_REGISTER,
+                WRITE_MULTIPLE_HOLDING_REGISTERS,
+        ),
 
-WRITE_MULTIPLE_COILS = 0x15
-WRITE_MULTIPLE_HOLDING_REGISTERS = 0x16
+        FatekType(
+                'holding_registers_ror',
+                READ_HOLDING_REGISTERS,
+                WRITE_SINGLE_HOLDING_REGISTER,
+                WRITE_MULTIPLE_HOLDING_REGISTERS,
+        ),
 
-MODBUS_MULTI_WRITE_FUNCTION_CODES = {
-        "discret_srelays": WRITE_MULTIPLE_COILS,
-        "discret_mrelays": WRITE_MULTIPLE_COILS,
-        "discret_inputs" : WRITE_MULTIPLE_COILS,
-        "discret_outputs" : WRITE_MULTIPLE_COILS,
-        "timers_status" : WRITE_MULTIPLE_COILS,
-        "counters_status" : WRITE_MULTIPLE_COILS,
-        "holding_registers" : WRITE_MULTIPLE_HOLDING_REGISTERS,
-        "holding_registers_ror" : WRITE_MULTIPLE_HOLDING_REGISTERS,
-        "data_registers" : WRITE_MULTIPLE_HOLDING_REGISTERS,
-        "timers" : WRITE_MULTIPLE_HOLDING_REGISTERS,
-        "counters" : WRITE_MULTIPLE_HOLDING_REGISTERS,
-        "counters_32bit" : WRITE_MULTIPLE_HOLDING_REGISTERS,
-}
+        FatekType(
+                'counters',
+                READ_HOLDING_REGISTERS,
+                WRITE_SINGLE_HOLDING_REGISTER,
+                WRITE_MULTIPLE_HOLDING_REGISTERS,
+        ),
+
+        FatekType(
+                'timers',
+                READ_HOLDING_REGISTERS,
+                WRITE_SINGLE_HOLDING_REGISTER,
+                WRITE_MULTIPLE_HOLDING_REGISTERS,
+        ),
+
+        FatekType(
+                "discret_srelays",
+                READ_COILS,
+                WRITE_SINGLE_COIL,
+                WRITE_MULTIPLE_COILS,
+        ),
+
+
+        FatekType(
+                "timers_status",
+                READ_COILS,
+                WRITE_SINGLE_COIL,
+                WRITE_MULTIPLE_COILS,
+        ),
+
+        FatekType(
+                "counters_status",
+                READ_COILS,
+                WRITE_SINGLE_COIL,
+                WRITE_MULTIPLE_COILS,
+        ),
+]

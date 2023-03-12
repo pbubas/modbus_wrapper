@@ -3,6 +3,15 @@ from modbus_client_wrapper import ModbusClientWrapper
 from fatek_address import FatekByType, FatekList
 from typing import Union, List
 from write_model import WriteModel
+from modbus_functions_map import (
+        READ_COILS,
+        READ_HOLDING_REGISTERS,
+        WRITE_SINGLE_COIL,
+        WRITE_SINGLE_HOLDING_REGISTER,
+        WRITE_MULTIPLE_COILS,
+        WRITE_MULTIPLE_HOLDING_REGISTERS,
+)
+
 
 LOG = logging.getLogger(__name__)
 
@@ -15,12 +24,12 @@ class FatekModbusClient(ModbusClientWrapper):
                  debug, auto_open, auto_close)
         
         self.function_map = {
-            0x01: self.read_multi_coils,
-            0x03: self.read_multi_holding_registers,
-            0x05: self.write_single_coil,
-            0x06: self.write_single_register,
-            0x15: self.write_multiple_coils,
-            0x16: self.write_multiple_registers
+            READ_COILS: self.read_multi_coils,
+            READ_HOLDING_REGISTERS: self.read_multi_holding_registers,
+            WRITE_SINGLE_COIL: self.write_single_coil,
+            WRITE_SINGLE_HOLDING_REGISTER: self.write_single_register,
+            WRITE_MULTIPLE_COILS: self.write_multiple_coils,
+            WRITE_MULTIPLE_HOLDING_REGISTERS: self.write_multiple_registers
          }
 
     def read(self, fatek_addresses: list, *args, **kwargs) -> dict():
