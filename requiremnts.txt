@@ -1,1 +1,2 @@
-pyModbusTCP
+pydantic==1.10.6
+pyModbusTCP==0.2.0
