@@ -54,3 +54,57 @@ REG_32BIT = (
 
 
 ALL = COILS | REG_16BIT | REG_32BIT
+
+READ_COILS = 0x01
+READ_MULTIPLE_HOLDING_REGISTERS = 0x03
+
+MODBUS_READ_FUNCTION_CODES = {
+        "discret_srelays": READ_COILS,
+        "discret_mrelays": READ_COILS,
+        "discret_inputs" : READ_COILS,
+        "discret_outputs" : READ_COILS,
+        "timers_status" : READ_COILS,
+        "counters_status" : READ_COILS,
+        "holding_registers" : READ_MULTIPLE_HOLDING_REGISTERS,
+        "holding_registers_ror" : READ_MULTIPLE_HOLDING_REGISTERS,
+        "data_registers" : READ_MULTIPLE_HOLDING_REGISTERS,
+        "timers" : READ_MULTIPLE_HOLDING_REGISTERS,
+        "counters" : READ_MULTIPLE_HOLDING_REGISTERS,
+        "counters_32bit" : READ_MULTIPLE_HOLDING_REGISTERS,
+}
+
+WRITE_SINGLE_COIL = 0x05
+WRITE_SINGLE_HOLDING_REGISTER = 0x06
+
+MODBUS_WRITE_FUNCTION_CODES = {
+        "discret_srelays": WRITE_SINGLE_COIL,
+        "discret_mrelays": WRITE_SINGLE_COIL,
+        "discret_inputs" : WRITE_SINGLE_COIL,
+        "discret_outputs" : WRITE_SINGLE_COIL,
+        "timers_status" : WRITE_SINGLE_COIL,
+        "counters_status" : WRITE_SINGLE_COIL,
+        "holding_registers" : WRITE_SINGLE_HOLDING_REGISTER,
+        "holding_registers_ror" : WRITE_SINGLE_HOLDING_REGISTER,
+        "data_registers" : WRITE_SINGLE_HOLDING_REGISTER,
+        "timers" : WRITE_SINGLE_HOLDING_REGISTER,
+        "counters" : WRITE_SINGLE_HOLDING_REGISTER,
+        "counters_32bit" : WRITE_SINGLE_HOLDING_REGISTER,
+}
+
+WRITE_MULTIPLE_COILS = 0x15
+WRITE_MULTIPLE_HOLDING_REGISTERS = 0x16
+
+MODBUS_MULTI_WRITE_FUNCTION_CODES = {
+        "discret_srelays": WRITE_MULTIPLE_COILS,
+        "discret_mrelays": WRITE_MULTIPLE_COILS,
+        "discret_inputs" : WRITE_MULTIPLE_COILS,
+        "discret_outputs" : WRITE_MULTIPLE_COILS,
+        "timers_status" : WRITE_MULTIPLE_COILS,
+        "counters_status" : WRITE_MULTIPLE_COILS,
+        "holding_registers" : WRITE_MULTIPLE_HOLDING_REGISTERS,
+        "holding_registers_ror" : WRITE_MULTIPLE_HOLDING_REGISTERS,
+        "data_registers" : WRITE_MULTIPLE_HOLDING_REGISTERS,
+        "timers" : WRITE_MULTIPLE_HOLDING_REGISTERS,
+        "counters" : WRITE_MULTIPLE_HOLDING_REGISTERS,
+        "counters_32bit" : WRITE_MULTIPLE_HOLDING_REGISTERS,
+}

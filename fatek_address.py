@@ -1,6 +1,14 @@
-import fatek_mapping 
-from typing import List
+import fatek_mapping
+from typing import List, Union
+from modbus_client_wrapper import ModbusClientWrapper
 
+
+class FatekAddressValidationException(Exception):
+    pass
+
+
+class FatekListValidationException(Exception):
+    pass
 
 class FatekAddress:
     
@@ -11,7 +19,7 @@ class FatekAddress:
         if fatek_address in fatek_addresses:
             self.address = fatek_address 
         else:
-            raise Exception(f'address "{fatek_address}" not recognized, provide correct address: {doc}')
+            raise FatekAddressValidationException(f'address "{fatek_address}" not recognized, provide correct address: {doc}')
 
 
     @property
@@ -26,8 +34,21 @@ class FatekAddress:
         
         return modbus_number
     
-    def _get_modbus_function_code(self):
-        pass
+    @property
+    def modbus_address(self):
+        return ModbusClientWrapper.get_address(self.modbus_number)
+    
+    @property
+    def modbus_read_function_code(self):
+        return fatek_mapping.MODBUS_READ_FUNCTION_CODES[self.type]
+
+    @property
+    def modbus_write_function_code(self):
+        return fatek_mapping.MODBUS_WRITE_FUNCTION_CODES[self.type]
+
+    @property
+    def modbus_multi_write_function_code(self):
+        return fatek_mapping.MODBUS_MULTI_WRITE_FUNCTION_CODES[self.type]
     
     @property
     def type(self):
@@ -44,6 +65,10 @@ class FatekList(list):
     def __init__ (self, fatek_list: List[FatekAddress]):
         super().__init__(fatek_list)
 
+        all_types = {i.type for i in self}
+        if len(all_types) != 1: 
+            raise FatekListValidationException(f"fatek addresse needs to be same type")
+
     @property
     def modbus_numbers(self):
         return [i.modbus_number for i in self]
@@ -53,15 +78,31 @@ class FatekList(list):
         return [i.address for i in self]
     
     @property
+    def type(self):
+        return self[0].type
+    
+    @property
     def type_size(self):
-        all_types = {i.type for i in self}
-        if len(all_types) == 1:
-            type = next(i for i in all_types)
-            return len(fatek_mapping.MAP[type])
+        return len(fatek_mapping.MAP[self.type])
+
+    @property
+    def modbus_read_function_code(self):
+        return fatek_mapping.MODBUS_READ_FUNCTION_CODES[self.type]
+
+    @property
+    def modbus_write_function_code(self):
+        return fatek_mapping.MODBUS_WRITE_FUNCTION_CODES[self.type]
+
+    @property
+    def modbus_multi_write_function_code(self):
+        return fatek_mapping.MODBUS_MULTI_WRITE_FUNCTION_CODES[self.type]
+    
     
 
 class FatekByType(list):
-    def __init__ (self, fatek_list: list):
+    def __init__ (self, fatek_list: Union[list,str]):
+        if not isinstance(fatek_list, list):
+            fatek_list = list([fatek_list])
 
         _fatek_list = []
         for entry in fatek_list:
@@ -97,6 +138,8 @@ class FatekByType(list):
         address_range = list(range(start_address, end_address))
 
         return [address_prefix + str(address) for address in address_range]
+    
+
 
 
 
