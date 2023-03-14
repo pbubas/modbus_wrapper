@@ -94,7 +94,7 @@ class FatekByType(list):
         start_address = int(fatek_range[0][1:])
         end_address = int(fatek_range[1]) + 1
 
-        address_range = list(range(start_address, end_address))
+        address_range = range(start_address, end_address)
 
         return [address_prefix + str(address) for address in address_range]
     

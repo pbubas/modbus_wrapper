@@ -13,7 +13,7 @@ from modbus_functions_map import (
         WRITE_MULTIPLE_COILS,
         WRITE_MULTIPLE_HOLDING_REGISTERS,
 )
-from modbus_address import ModbusListByType, ModbusAddress
+from modbus_address import ModbusListByType, ModbusAddress, ModbusList
 
 
 LOG = logging.getLogger(__name__)
@@ -54,16 +54,48 @@ class ModbusClientWrapper(ModbusClient):
         
         return result
     
-    def write(self, modbus_numbers_to_write: dict):
-        modbus_number_list = ModbusListByType(list(modbus_numbers_to_write.keys()))
-        for values in modbus_number_list.data.values():
-            write_function = self.function_map[values.function.write]
-            multi_write_function = self.function_map[values.function.multi_write]
-            print (self._create_reads(values.addresses, max_read_size=self.HOLDING_REGISTERS_MAX_READ_SIZE))
+    def write(self, modbus_dict_to_write: dict):
+        modbus_list = ModbusListByType(list(modbus_dict_to_write.keys()))
 
-    def _create_writes(self, modbus_numbers_to_write: dict):
-        self._create_reads(values.addresses, max_read_size=self.HOLDING_REGISTERS_MAX_READ_SIZE)
-        pass
+        modbus_lists_of_one_type = modbus_list.data.values()
+
+        for modbus_list in modbus_lists_of_one_type:
+            self._write_modbus_list(modbus_list, modbus_dict_to_write)
+
+
+    def _write_modbus_list(self, modbus_list: ModbusList, modbus_dict_to_write: dict):
+            write_function = self.function_map[modbus_list.function.write]
+            multi_write_function = self.function_map[modbus_list.function.multi_write]
+
+            dict_to_write = {modbus.number:modbus_dict_to_write[modbus.number] for modbus in  modbus_list}
+            arguments_to_write = self._create_writes(dict_to_write)
+
+            for argument in arguments_to_write:
+                if isinstance(argument[1], list):
+                    print (f"write {argument} using {multi_write_function} \n")
+                else:
+                    print (f"write {argument} using {write_function} \n")
+
+    @staticmethod
+    def _create_writes(modbus_numbers_to_write: dict) -> dict:
+        keys = modbus_numbers_to_write.keys()
+        max_write_size=ModbusClientWrapper.HOLDING_REGISTERS_MAX_READ_SIZE
+
+        writes = ModbusClientWrapper._create_reads(keys, max_read_size=max_write_size, read_mask=1)
+        
+        for i in writes:
+            starting_address = i[0]
+            write_size = i[1]
+            addresses_to_write = range(starting_address, starting_address + write_size)
+
+            values_to_write = [modbus_numbers_to_write[w] for w in addresses_to_write]
+            number_of_values_to_write = len(values_to_write)
+            values_to_write = int(values_to_write[0]) if number_of_values_to_write  == 1 else values_to_write
+
+            i[1] = values_to_write
+
+        return writes
+
         
 
     def read_multi_coils(self, coils_numbers: List[int], *args, **kwargs) -> Union[List[bool], Dict[int, bool]]:

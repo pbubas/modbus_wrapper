@@ -9,7 +9,7 @@ from modbus_functions_map import (
         WRITE_MULTIPLE_HOLDING_REGISTERS,
 )
 from dataclasses import dataclass
-from typing import List, Union
+from typing import List, Union, Dict
 
 
 @dataclass
@@ -119,14 +119,24 @@ class ModbusListByType(list):
 
         super().__init__(modbus_list)
 
-        all_types = {entry.function.name for entry in self}
+        all_type_names = {entry.function.name for entry in self}         
+        modbus_lists_by_type = map(self._get_type, all_type_names)
 
-        for type in all_types:
-            self.__dict__[type] = self._get_types(type)
+        for type_list in modbus_lists_by_type: 
+            self._add_type_list_as_attribute(type_list)
+
             
-    def _get_types(self, type_name: str):
-        return ModbusList([entry for entry in self if entry.function.name == type_name])
+    def _get_type(self, type_name: str) -> dict:
+        filter_by_modbus_type = lambda type: type.function.name == type_name
+        all_modbus_entries = self
+
+        filtered = filter (filter_by_modbus_type, all_modbus_entries)
+
+        return {type_name: ModbusList(filtered)}
     
+    def _add_type_list_as_attribute(self, dict_to_update: dict):
+        self.__dict__.update(dict_to_update)
+
     @property
     def data(self):
         return self.__dict__
@@ -141,3 +151,4 @@ class ModbusListByType(list):
         number_range = list(range(start_number, end_number))
 
         return number_range
+    
