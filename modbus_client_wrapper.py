@@ -2,29 +2,40 @@ import logging
 from sys import stdout
 from pyModbusTCP.client import ModbusClient
 from typing import List, Dict, Union
-from enum import Enum
-from modbus_functions_map import (
-        READ_COILS,
-        READ_HOLDING_REGISTERS,
-        READ_DISCRETE_INPUTS,
-        READ_INPUT_REGISTERS,
-        WRITE_SINGLE_COIL,
-        WRITE_SINGLE_HOLDING_REGISTER,
-        WRITE_MULTIPLE_COILS,
-        WRITE_MULTIPLE_HOLDING_REGISTERS,
-)
-from modbus_address import ModbusListByType, ModbusAddress, ModbusList
-
+import modbus_function_code 
+from helper import ModbusObject, get_modbus_object
+from dataclasses import dataclass
+import modbus_objects
 
 LOG = logging.getLogger(__name__)
 
+class FunctionUnknow(Exception):
+    pass
+
+
+class ObjectNonWriteable(Exception):
+    pass
+
+
+@dataclass
+class ModbusFunctionArgument:
+     starting_address: int
+     size: int
+
+@dataclass
+class ModbusWriteFunctionArgument:
+     starting_address: int
+     values_to_write: List[int]
+     
 
 class ModbusClientWrapper(ModbusClient):
 
-    COILS_MAX_READ_SIZE = 2000
-    DISCRETE_INPUTS_MAX_READ_SIZE = 2000
-    HOLDING_REGISTERS_MAX_READ_SIZE = 125
-    INPUT_REGISTERS_MAX_READ_SIZE = 125
+    MAX_READ_SIZE = {
+        modbus_objects.Coil : 2000,
+        modbus_objects.DiscreteInput : 2000,
+        modbus_objects.HoldingRegister : 125,
+        modbus_objects.InputRegister : 125,
+    }
 
     def __init__(self, host='localhost', port=502, unit_id=1, timeout=30.0,
                  debug=False, auto_open=True, auto_close=False):
@@ -32,119 +43,126 @@ class ModbusClientWrapper(ModbusClient):
                  debug, auto_open, auto_close)
         
         self.function_map = {
-            READ_COILS: self.read_multi_coils,
-            READ_HOLDING_REGISTERS: self.read_multi_holding_registers,
-            READ_DISCRETE_INPUTS: self.read_discrete_inputs,
-            READ_INPUT_REGISTERS: self.read_multi_input_registers,
-            WRITE_SINGLE_COIL: self.write_single_coil,
-            WRITE_SINGLE_HOLDING_REGISTER: self.write_single_register,
-            WRITE_MULTIPLE_COILS: self.write_multiple_coils,
-            WRITE_MULTIPLE_HOLDING_REGISTERS: self.write_multiple_registers
+            modbus_function_code.READ_COILS: self.read_coils,
+            modbus_function_code.READ_HOLDING_REGISTERS: self.read_holding_registers,
+            modbus_function_code.READ_DISCRETE_INPUTS: self.read_discrete_inputs,
+            modbus_function_code.READ_INPUT_REGISTERS: self.read_input_registers,
+            modbus_function_code.WRITE_SINGLE_COIL: self.write_single_coil,
+            modbus_function_code.WRITE_SINGLE_HOLDING_REGISTER: self.write_single_register,
+            modbus_function_code.WRITE_MULTIPLE_COILS: self.write_multiple_coils,
+            modbus_function_code.WRITE_MULTIPLE_HOLDING_REGISTERS: self.write_multiple_registers
          }
-
-    def read(self, modbus_number_list: list) -> Dict[int, Union[bool, int, None]]: 
-
-        modbus_number_list = ModbusListByType(modbus_number_list)
-
-        result = {}
-
-        for values in modbus_number_list.data.values():
-            read_function = self.function_map[values.function.read]
-            result = result | read_function(values.numbers, return_dict=True)
         
+    def read(self, modbus_numbers: List[Union[int,str]], *args, **kwargs) -> dict:
+        modbus_objects = [get_modbus_object(i) for i in modbus_numbers]
+
+        modbus_objects = self.read_modbus_objects(modbus_objects, *args, **kwargs)
+
+        result = {obj:obj.read_value for obj in modbus_objects}
+
         return result
     
-    def write(self, modbus_dict_to_write: dict):
-        modbus_list = ModbusListByType(list(modbus_dict_to_write.keys()))
+    def read_modbus_objects(
+            self, 
+            modbus_objects: List[ModbusObject],  
+            max_read_size: int = 1, 
+            read_mask: int = 1,
+            ) -> List[ModbusObject]:
+        
+        self._check_duplicates(modbus_objects)
 
-        modbus_lists_of_one_type = modbus_list.data.values()
+        modbus_object_types = list({type(i) for i in modbus_objects})
 
-        for modbus_list in modbus_lists_of_one_type:
-            self._write_modbus_list(modbus_list, modbus_dict_to_write)
+        for object_type in modbus_object_types:
+            function_code = object_type.FUNCTION_CODE.read
+            read_function = self._get_function(function_code)
+            function_string = read_function.__doc__.splitlines()[0]
+            object_max_read_size = self._get_read_size(object_type) 
+            _max_read_size = object_max_read_size if object_max_read_size else max_read_size
 
+            objects_to_read = self._filter_modbus_type(object_type, modbus_objects)
+            
+            object_numbers = [object for object in objects_to_read]
+            LOG.debug(f"{function_string} to read numbers: {object_numbers}")
+            addresses_to_read = [object.address for object in objects_to_read]
+            LOG.debug(f"{function_string} to read modbus addresses: {addresses_to_read}")
 
-    def _write_modbus_list(self, modbus_list: ModbusList, modbus_dict_to_write: dict):
-            write_function = self.function_map[modbus_list.function.write]
-            multi_write_function = self.function_map[modbus_list.function.multi_write]
+            function_arguments = self._get_modbus_function_args(objects_to_read, _max_read_size, read_mask)
+            
+            collected_values = self._read(function_arguments, read_function)
 
-            dict_to_write = {modbus.number:modbus_dict_to_write[modbus.number] for modbus in  modbus_list}
-            arguments_to_write = self._create_writes(dict_to_write)
+            [obj.update_value(collected_values[obj.address]) for obj in objects_to_read]
 
-            for argument in arguments_to_write:
-                if isinstance(argument[1], list):
-                    print (f"write {argument} using {multi_write_function} \n")
-                else:
-                    print (f"write {argument} using {write_function} \n")
+        return modbus_objects
+
+    def write_modbus_objects(self, modbus_objects: List[ModbusObject]):
+        modbus_object_types = list({type(i) for i in modbus_objects})
+        for object_type in modbus_object_types:
+
+            write_function_code = object_type.FUNCTION_CODE.write
+            multi_write_function_code = object_type.FUNCTION_CODE.multi_write
+
+            if not write_function_code or not multi_write_function_code:
+                raise ObjectNonWriteable(f"object {object_type} is non writeable")
+
+            write_function = self._get_function(write_function_code)
+            multi_write_function = self._get_function(multi_write_function_code) 
+
+            objects_to_write = self._filter_modbus_type(object_type, modbus_objects)
+            write_size = self._get_read_size(object_type)
+            arguments_to_write = self._get_modbus_write_function_args(objects_to_write, write_size)  
+
+            self._write(arguments_to_write, write_function, multi_write_function)
+
+        return "dupa"
+            
+
+    def _write(self, arguments_to_write, write_function, multi_write_function):
+        for argument in arguments_to_write:
+            # print (write_function, multi_write_function, argument.starting_address, argument.size)
+            # print (write_function, multi_write_function, argument.starting_address, argument.size)
+            print (argument)
+        
+        
+    def _get_function(self, code:[hex, int]):
+        """Get modbus function by code"""
+        try:
+            function = self.function_map[code]
+        except KeyError:
+            raise FunctionUnknow(f"code {code} not valid")
+        
+        return function
 
     @staticmethod
-    def _create_writes(modbus_numbers_to_write: dict) -> dict:
-        keys = modbus_numbers_to_write.keys()
-        max_write_size=ModbusClientWrapper.HOLDING_REGISTERS_MAX_READ_SIZE
+    def _get_modbus_write_function_args(modbus_objects: List[ModbusObject], write_size):
+        arguments = ModbusClientWrapper._get_modbus_function_args(modbus_objects, max_read_size=write_size, read_mask=1)
+        all_values_to_write = {obj.address: obj.value_to_write for obj in modbus_objects}
 
-        writes = ModbusClientWrapper._create_reads(keys, max_read_size=max_write_size, read_mask=1)
+        arguments_to_write = []
         
-        for i in writes:
-            starting_address = i[0]
-            write_size = i[1]
-            addresses_to_write = range(starting_address, starting_address + write_size)
+        for argument in arguments:
+            ending_address = argument.starting_address + (argument.size)
+            range_of_addresses = range(argument.starting_address, ending_address)
+            if len(range_of_addresses) == 1:
+                values_to_write = all_values_to_write[argument.starting_address]
+            else:
+                values_to_write = [all_values_to_write[address] for address in range_of_addresses]
 
-            values_to_write = [modbus_numbers_to_write[w] for w in addresses_to_write]
-            number_of_values_to_write = len(values_to_write)
-            values_to_write = int(values_to_write[0]) if number_of_values_to_write  == 1 else values_to_write
+            argument = ModbusWriteFunctionArgument(argument.starting_address, values_to_write)
+            arguments_to_write.append(argument)
+            
+        return arguments_to_write
 
-            i[1] = values_to_write
-
-        return writes
-
-        
-
-    def read_multi_coils(self, coils_numbers: List[int], *args, **kwargs) -> Union[List[bool], Dict[int, bool]]:
-
-        return self._read_multi(
-            coils_numbers,
-            self.read_coils,
-            max_read_size = self.COILS_MAX_READ_SIZE,
-            *args, **kwargs
-            )
-
-
-    def read_multi_discrete_inputs(self, discrete_inputs_numbers: List[int], *args, **kwargs):
-
-        return self._read_multi(
-            discrete_inputs_numbers,
-            self.read_discrete_inputs,
-            self.DISCRETE_INPUTS_MAX_READ_SIZE, 
-            *args, **kwargs
-            )
-
-
-    def read_multi_holding_registers(self, holding_registers_numbers: List[int], *args, **kwargs):
-
-        return self._read_multi(
-            holding_registers_numbers,
-            self.read_holding_registers,
-            self.HOLDING_REGISTERS_MAX_READ_SIZE,
-            *args, **kwargs
-            )
-    
-
-    def read_multi_input_registers(self, input_registers_numbers: List[int], *args, **kwargs):
-
-        return self._read_multi(
-            input_registers_numbers,
-            self.read_input_registers,
-            self.INPUT_REGISTERS_MAX_READ_SIZE,
-            *args, **kwargs
-            )
-    
     @staticmethod
-    def _create_reads(
-            addresses: List[int], 
+    def _get_modbus_function_args(
+            modbus_objects: List[ModbusObject], 
             max_read_size: int = 1, 
             read_mask: int = 1
-            ) -> List[List[int]]:
-        coils_read = []
+            ) -> List[ModbusFunctionArgument]:
+
+        arguments = []
         done_list = set()
+        addresses = (obj.address for obj in modbus_objects)
         addresses  = sorted(addresses)
 
         for i in range(len(addresses)):
@@ -163,52 +181,59 @@ class ModbusClientWrapper(ModbusClient):
                             done_list.add(remain_coil)
                     _read_mask +=1
 
+                argument = ModbusFunctionArgument(addresses[i], read_size)
+                arguments.append(argument)
 
-                coils_read.append([addresses[i], read_size])
+        return arguments
 
-        return coils_read
-
-    def check_duplicates(self, list_to_check):
+    def _check_duplicates(self, list_to_check):
         if len(set(list_to_check)) != len(list_to_check):
             raise Exception("provided list contains duplicates")
 
-    def _read_multi(
-            self, 
-            numbers, 
-            function, 
-            max_read_size: int = 1, 
-            read_mask: int = 1, 
-            return_dict: bool = False
-            ):
-        function_string = function.__doc__.splitlines()[0]
-        
-        self.check_duplicates(numbers)
 
-        LOG.debug(f"{function_string} to read modbus numbers: {numbers}")
+    def _filter_modbus_type(self, object_type: ModbusObject, modbus_objects: List[ModbusObject]) -> List[ModbusObject]:
+        is_type = lambda obj: type(obj)==object_type
+        objects_to_read = filter(is_type, modbus_objects)
 
-        address_list = [ModbusAddress.get_address(number) for number in numbers]
-        LOG.debug(f"{function_string} to read modbus addresses: {address_list}")
+        return list(objects_to_read)
 
-        reads = ModbusClientWrapper._create_reads(address_list, max_read_size, read_mask)
+    def _get_read_size(self, modbus_class):
+        try: 
+            return next(
+                value for cls, value in self.MAX_READ_SIZE.items() 
+                if issubclass(modbus_class, cls)
+                )
+        except StopIteration:
+            return None
+    
+
+    def _read(self, modbus_function_arguments: List[ModbusFunctionArgument], read_function):
+        function_string = read_function.__doc__.splitlines()[0]
 
         self.open()
-        values = {}
-        for read in reads:
-            values[read[0]] = function(*read)
-            if not values[read[0]]: # None means no reply from modbus target
-                LOG.error(f'{function_string} failed to read {read}')
-                values[read[0]] = [None for i in range(0, read[1])] # Fill all results with None, when no reply from Modbus target
 
-            LOG.debug(f'{function_string} {read} results: {values[read[0]]}')
+        collected_values = {}
+
+        for argument in modbus_function_arguments:
+            starting_address = argument.starting_address
+
+            collected_values.update(
+                {
+                starting_address: read_function(starting_address, argument.size)
+                }
+            )
+
+            if not collected_values[starting_address]: # None means no reply from modbus target
+                LOG.error(f'{function_string} failed to read {argument}')
+                collected_values[starting_address] = [None for i in range(0, argument.size)] # Fill all results with None, when no reply from Modbus target
+
+            LOG.debug(f'{function_string} {argument} results: {collected_values[starting_address]}')
+
             increment = 0
-            for value in values[read[0]]:
-                values[read[0]+increment] = value
+            for value in collected_values[starting_address]:
+                collected_values[starting_address+increment] = value
                 increment+=1
 
+        return collected_values
 
-        list_of_result_values = [values[entry] for entry in address_list]
-        if return_dict:
-            zip_with_number_and_values = zip(numbers, list_of_result_values)
-            return dict(zip_with_number_and_values)
-
-        return list_of_result_values
+    

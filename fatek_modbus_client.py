@@ -3,7 +3,7 @@ from modbus_client_wrapper import ModbusClientWrapper
 from fatek_address import FatekByType, FatekList
 from typing import Union, List
 from write_model import WriteModel
-from modbus_functions_map import (
+from modbus_function_code import (
         READ_COILS,
         READ_HOLDING_REGISTERS,
         WRITE_SINGLE_COIL,
