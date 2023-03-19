@@ -1,5 +1,5 @@
-from modbus_objects import ModbusObject
-from fatek_objects import FatekObject
+from modbus_object import ModbusObject
+from fatek_object import FatekObject
 from typing import Union
 
 class ModbusObjectValidation(Exception):
@@ -16,3 +16,6 @@ def get_modbus_object(modbus_number: int, value_to_write: Union[int, bool] = Non
                 return object_class(modbus_number, value_to_write)
     raise ModbusObjectValidation(f'provided number {modbus_number} is not valid Modbus object')
 
+
+# def get_modbus_object_from_range(number_range: str):
+     
