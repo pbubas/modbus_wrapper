@@ -18,4 +18,3 @@ class ReadMask:
 class MaxWriteSize:
     COIL = 1968
     HOLDING_REGISTER = 123
-

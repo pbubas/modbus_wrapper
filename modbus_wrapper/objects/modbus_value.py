@@ -11,7 +11,10 @@ class IntValue:
     sign_int: int #-32768 to 32767
 
     @classmethod
-    def from_sign_int(cls, sign_int: int):
+    def from_sign_int(cls, sign_int: int | None):
+        if sign_int == None:
+            return None
+
         valid_int = lambda x:  type(x) == int
         valid_sign_range = lambda x: -32768 <= x <= 32767
 
@@ -26,7 +29,10 @@ class IntValue:
         return cls(unsign_int, sign_int)
 
     @classmethod
-    def from_unsign_int(cls, unsign_int: int):
+    def from_unsign_int(cls, unsign_int: int | None):
+        if unsign_int == None:
+            return None
+
         valid_int = lambda x:  type(x) == int
         valid_unsign_range = lambda x: 0 <= x <= 0xffff
         
@@ -47,7 +53,10 @@ class IntValue:
         return self.unsign_int == value
 
 class BoolValue:
-    def __new__(cls, value: bool | int):
+    def __new__(cls, value: bool | int | None):
+        if value == None:
+            return None
+
         if type(value) == bool or value in [0,1]:
             return bool(value)
         raise ModbusValueException(f'value "{value}" is not correct bool')

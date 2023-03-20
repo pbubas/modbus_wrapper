@@ -1,10 +1,9 @@
 import logging
-from sys import stdout
 from pyModbusTCP.client import ModbusClient
 from typing import List, Union
-import modbus_function_code 
-from helper import ModbusObject, get_modbus_object
-from function_argument import ReadFunctionArgument, WriteFunctionArgument
+from . import modbus_function_code 
+from .object_factory import ModbusObject, get_modbus_object
+from .function_argument import ReadFunctionArgument, WriteFunctionArgument
 
 LOG = logging.getLogger(__name__)
 
@@ -38,7 +37,7 @@ class ModbusClientWrapper(ModbusClient):
 
         self.read_modbus_objects(modbus_objects, *args, **kwargs)
 
-        result = {obj:obj.read_value for obj in modbus_objects}
+        result = {obj:obj.current_value for obj in modbus_objects}
 
         return result
     

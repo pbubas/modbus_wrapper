@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from typing import List, Dict, Type, Union
-from helper import ModbusObject
+from typing import List, Type
+from .objects import ModbusObject
 
 class ModbusObjectListUniqueException(Exception):
     pass
@@ -112,22 +112,6 @@ class WriteFunctionArgument(FunctionArgument):
     write_function_code: int
     object_list: ModbusObjectList
 
-    def __post_init__(self):
-        if not isinstance(self.values_to_write, list): 
-            values = [self.values_to_write]
-        else:
-            values = self.values_to_write
-
-        valid_bool = lambda x: type(x) == bool
-        valid16bit_int = lambda x: all([type(x) == int, 0 <= x <= 0xffff])
-        valid16bit_uint = lambda x: all([type(x) == int, -32768 <= x <= 32767])
-        
-        for value in values:
-            value_exception = ModbusWriteValueException(f'value to write: "{value}" not valid')
-            if not valid_bool(value) and not valid16bit_int(value) and not valid16bit_uint:
-                raise value_exception
-
-
 
     @classmethod
     def get_arguments(cls, modbus_objects: List[ModbusObject], max_write_size: int = None):
@@ -150,7 +134,11 @@ class WriteFunctionArgument(FunctionArgument):
                 number_of_values_to_write = write['size']
                 starting_address = write['starting_address'] 
                 ending_address = starting_address + number_of_values_to_write
-                get_write_value_for_address = lambda address: next(obj.value_to_write for obj in single_type.objects if obj.address == address)
+                get_write_value_for_address = lambda address: next(
+                        obj.value_to_write
+                        for obj in single_type.objects 
+                        if obj.address == address
+                        )
                 get_objets_for_address = lambda address: next(obj for obj in single_type.objects if obj.address == address)
                 addresses_range = range(starting_address, ending_address)
 

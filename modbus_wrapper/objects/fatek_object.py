@@ -1,4 +1,4 @@
-from modbus_object import (
+from .modbus_object import (
     Coil as ModbusCoil,
     HoldingRegister as ModbusHoldingRegister
 )

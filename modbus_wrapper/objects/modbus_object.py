@@ -1,9 +1,8 @@
-import modbus_function_code
 from dataclasses import dataclass
 from typing import Union
-from config import MaxReadSize, ReadMask, MaxWriteSize
-from modbus_value import IntValue, BoolValue
-
+from .. import modbus_function_code
+from .config import MaxReadSize, ReadMask, MaxWriteSize
+from .modbus_value import IntValue, BoolValue
 
 
 @dataclass
@@ -28,11 +27,20 @@ class Int:
     VALUE_READ_CLS = IntValue.from_unsign_int
     VALUE_WRITE_CLS = IntValue.from_sign_int
 
+    @property
+    def value_to_write(self):
+        return self._value_to_write.unsign_int
+
 
 class Bool:
     """bool object"""
     VALUE_READ_CLS = BoolValue
     VALUE_WRITE_CLS = BoolValue
+
+    @property
+    def value_to_write(self):
+        return self._value_to_write
+    
 
 class ModbusObject:
     """Modbus object basic class"""
@@ -43,7 +51,7 @@ class ModbusObject:
             target_range: TargetRangeInt | TargetRangeBool = None
         ):
         self.number = modbus_number
-        self.value_to_write = self.VALUE_WRITE_CLS(value_to_write) if value_to_write else None
+        self._value_to_write = self.VALUE_WRITE_CLS(value_to_write)
         self.current_value = None
         self.target_range = target_range
         self._changed = None
@@ -84,6 +92,7 @@ class ModbusObject:
 
         self.current_value = self.VALUE_READ_CLS(value)
         return self.current_value
+
 
     def update_value_to_write(self, value_to_write: int | bool):
         self.value_to_write = self.VALUE_WRITE_CLS(value_to_write) if value_to_write else None
