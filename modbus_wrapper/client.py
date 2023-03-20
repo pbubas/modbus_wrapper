@@ -1,6 +1,6 @@
 import logging
 from pyModbusTCP.client import ModbusClient
-from typing import List, Union
+from typing import List
 from . import modbus_function_code 
 from .object_factory import ModbusObject, get_modbus_object
 from .function_argument import ReadFunctionArgument, WriteFunctionArgument
@@ -32,7 +32,7 @@ class ModbusClientWrapper(ModbusClient):
             modbus_function_code.WRITE_MULTIPLE_HOLDING_REGISTERS: self.write_multiple_registers
          }
         
-    def read(self, modbus_numbers: List[Union[int,str]], *args, **kwargs) -> dict:
+    def read(self, modbus_numbers: List[int | str], *args, **kwargs) -> dict:
         modbus_objects = [get_modbus_object(n) for n in modbus_numbers]
 
         self.read_modbus_objects(modbus_objects, *args, **kwargs)
@@ -60,6 +60,15 @@ class ModbusClientWrapper(ModbusClient):
 
         self.close()
 
+    def write(self, modbus_numbers_with_values: dict) -> dict:
+        modbus_objects = [get_modbus_object(n,v) for n,v in modbus_numbers_with_values.items()]
+
+        self.write_modbus_objects(modbus_objects)
+
+        result = {obj:obj.current_value for obj in modbus_objects}
+
+        return result
+
     def write_modbus_objects(self, modbus_objects: List[ModbusObject]):
         arguments = WriteFunctionArgument.get_arguments(
                                         modbus_objects,
@@ -67,7 +76,8 @@ class ModbusClientWrapper(ModbusClient):
 
         self.open()
 
-        for arg in arguments: self._write(arg)
+        for arg in arguments: 
+            self._write(arg)
 
         self.close()
             
@@ -75,9 +85,17 @@ class ModbusClientWrapper(ModbusClient):
         write_function = self._get_function(write_argument.write_function_code)
         starting_address = write_argument.starting_address
         values_to_write = write_argument.values_to_write
-        print (write_function, starting_address, values_to_write)
-        write_function(starting_address, values_to_write)
-        
+        function_string = write_function.__doc__.splitlines()[0]
+        LOG.debug (f'executing function: "{function_string}" for argument: "{write_argument}"')
+
+        write_ok = write_function(starting_address, values_to_write)
+        objects = write_argument.object_list.objects
+        if write_ok:
+            [obj.update_current_value(obj.write_value.actual) for obj in objects]
+        else:
+            LOG.error(f'failed to write "{function_string}" for argument: "{write_argument}"')
+
+        return write_ok
         
     def _get_function(self, code:[hex, int]):
         """Get modbus function by code"""
@@ -124,7 +142,7 @@ class ModbusClientWrapper(ModbusClient):
             LOG.error(f'{function_string} failed to read {argument}')
             collected_values[starting_address] = [None for i in range(0, argument.size)] # Fill all results with None, when no reply from Modbus target
 
-        LOG.debug(f'{function_string} {argument} results: {collected_values[starting_address]}')
+        LOG.debug(f'executing function: "{function_string}" for argument "{argument}" results: "{collected_values[starting_address]}"')
 
         increment = 0
         for value in collected_values[starting_address]:
@@ -132,7 +150,7 @@ class ModbusClientWrapper(ModbusClient):
             increment+=1
 
         for object in argument.object_list.objects:
-            object.update_value(
+            object.update_current_value(
                 collected_values[object.address]
                 )
 

@@ -23,23 +23,15 @@ class TargetRangeBool:
 
 
 class Int:
-    """16bit integer object"""
+    """modbus 16bit integer object"""
     VALUE_READ_CLS = IntValue.from_unsign_int
     VALUE_WRITE_CLS = IntValue.from_sign_int
 
-    @property
-    def value_to_write(self):
-        return self._value_to_write.unsign_int
-
 
 class Bool:
-    """bool object"""
-    VALUE_READ_CLS = BoolValue
-    VALUE_WRITE_CLS = BoolValue
-
-    @property
-    def value_to_write(self):
-        return self._value_to_write
+    """modbus bool object"""
+    VALUE_READ_CLS = BoolValue.from_bool
+    VALUE_WRITE_CLS = BoolValue.from_bool
     
 
 class ModbusObject:
@@ -51,7 +43,7 @@ class ModbusObject:
             target_range: TargetRangeInt | TargetRangeBool = None
         ):
         self.number = modbus_number
-        self._value_to_write = self.VALUE_WRITE_CLS(value_to_write)
+        self.write_value = self.VALUE_WRITE_CLS(value_to_write)
         self.current_value = None
         self.target_range = target_range
         self._changed = None
@@ -73,7 +65,7 @@ class ModbusObject:
     def changed(self, change_bit: bool):
         self._changed = change_bit
 
-    def update_value(self, value: int | bool | None):
+    def update_current_value(self, value: int | bool | None):
         """method to update collected value, None values are ignored"""
         if value == None:
             self.changed = False
@@ -94,7 +86,7 @@ class ModbusObject:
         return self.current_value
 
 
-    def update_value_to_write(self, value_to_write: int | bool):
+    def update_write_value(self, value_to_write: int | bool):
         self.value_to_write = self.VALUE_WRITE_CLS(value_to_write) if value_to_write else None
         return self.value_to_write
 

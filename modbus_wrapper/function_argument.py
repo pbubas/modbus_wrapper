@@ -135,7 +135,7 @@ class WriteFunctionArgument(FunctionArgument):
                 starting_address = write['starting_address'] 
                 ending_address = starting_address + number_of_values_to_write
                 get_write_value_for_address = lambda address: next(
-                        obj.value_to_write
+                        obj.write_value.actual
                         for obj in single_type.objects 
                         if obj.address == address
                         )

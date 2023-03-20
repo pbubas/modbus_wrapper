@@ -2,12 +2,11 @@ from .modbus_object import (
     Coil as ModbusCoil,
     HoldingRegister as ModbusHoldingRegister
 )
-from typing import Union
 
 class FatekObject:
     """Basic Fatek Object"""
 
-    def __init__(self, fatek_number: str, value_to_write: Union[int, bool] = None):
+    def __init__(self, fatek_number: str, value_to_write: int | bool = None):
         self.fatek_number = fatek_number
         modbus_number = self.FATEK_MAP[self.fatek_number]
         super().__init__(modbus_number, value_to_write)
