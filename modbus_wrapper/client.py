@@ -2,7 +2,7 @@ import logging
 from pyModbusTCP.client import ModbusClient
 from typing import List
 from . import modbus_function_code 
-from .object_factory import ModbusObject, get_modbus_object
+from .object_factory import ModbusObject, get_modbus_object, get_modbus_object_from_range
 from .function_argument import ReadFunctionArgument, WriteFunctionArgument
 
 LOG = logging.getLogger(__name__)
@@ -33,11 +33,22 @@ class ModbusClientWrapper(ModbusClient):
          }
         
     def read(self, modbus_numbers: List[int | str], *args, **kwargs) -> dict:
-        modbus_objects = [get_modbus_object(n) for n in modbus_numbers]
+        modbus_objects = []
+
+        for n in modbus_numbers:
+            try: 
+               range_entry =  "-" in n
+            except TypeError:
+                range_entry = False
+
+            if range_entry:
+                modbus_objects = modbus_objects + get_modbus_object_from_range(n)
+            else:
+                modbus_objects.append(get_modbus_object(n))
 
         self.read_modbus_objects(modbus_objects, *args, **kwargs)
 
-        result = {obj:obj.current_value for obj in modbus_objects}
+        result = {obj.__repr__():obj.current_value.__repr__() for obj in modbus_objects}
 
         return result
     
@@ -65,7 +76,7 @@ class ModbusClientWrapper(ModbusClient):
 
         self.write_modbus_objects(modbus_objects)
 
-        result = {obj:obj.current_value for obj in modbus_objects}
+        result = {obj.__repr__():obj.current_value.__repr__() for obj in modbus_objects}
 
         return result
 

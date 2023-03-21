@@ -99,7 +99,7 @@ class Coil(ModbusObject, Bool):
     READ_MASK = ReadMask.COIL
     MAX_WRITE_SIZE = MaxWriteSize.COIL
     MOBUS_NUMBER_RANGE = range(1,65537)
-    VALUES = MOBUS_NUMBER_RANGE
+    NUMBER_RANGE = MOBUS_NUMBER_RANGE
     FUNCTION_CODE = FunctionCode(
         modbus_function_code.READ_COILS,
         modbus_function_code.WRITE_SINGLE_COIL,
@@ -113,7 +113,7 @@ class DiscreteInput(ModbusObject, Bool):
     READ_MASK = ReadMask.DISCRETE_INPUT
     MAX_READ_SIZE = 2000
     MOBUS_NUMBER_RANGE = range(100001,165537)
-    VALUES = MOBUS_NUMBER_RANGE
+    NUMBER_RANGE = MOBUS_NUMBER_RANGE
     FUNCTION_CODE = FunctionCode(
         modbus_function_code.READ_DISCRETE_INPUTS,
     )
@@ -124,7 +124,7 @@ class InputRegister(ModbusObject, Int):
     MAX_READ_SIZE = MaxReadSize.INPUT_REGISTER
     READ_MASK = ReadMask.INPUT_REGISTER
     MOBUS_NUMBER_RANGE = range(300001,365537)
-    VALUES = MOBUS_NUMBER_RANGE
+    NUMBER_RANGE = MOBUS_NUMBER_RANGE
     FUNCTION_CODE = FunctionCode(
         modbus_function_code.READ_INPUT_REGISTERS,
     )
@@ -136,7 +136,7 @@ class HoldingRegister(ModbusObject, Int):
     READ_MASK = ReadMask.HOLDING_REGISTER
     MAX_WRITE_SIZE = MaxWriteSize.HOLDING_REGISTER
     MOBUS_NUMBER_RANGE = range(400001,465537)
-    VALUES = MOBUS_NUMBER_RANGE
+    NUMBER_RANGE = MOBUS_NUMBER_RANGE
     FUNCTION_CODE = FunctionCode(
         modbus_function_code.READ_HOLDING_REGISTERS,
         modbus_function_code.WRITE_SINGLE_HOLDING_REGISTER,
