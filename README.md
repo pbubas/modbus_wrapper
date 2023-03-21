@@ -1,5 +1,7 @@
 # modbus_wrapper
 
+wrapper for pyModbusTCP accepting all Modbus numbers with Fatek support
+
 ## read
 
 List of different Modbus types can be provided in the input:
@@ -19,13 +21,13 @@ read_holding_registers(799, 2)
 read_discrete_inputs(299, 1)
 ```
 
-* All coils are read in one function call thanks to *MaxReadSize* and *ReadMask* parameters which can be configured in [modbus object config file](modbus_wrapper/objects/config.py)
+* All coils are read in one function call thanks to **MaxReadSize** and **ReadMask** parameters which can be configured in [modbus object config file](modbus_wrapper/objects/config.py)
 
 ```python
 client.read(modbus_list, max_read_size=1)
 ```
 
-For above example, 8 functions will be executed:
+For above example, 8 modbus functions will be executed:
 ```python
 read_coils(19, 1)
 read_coils(29, 1)
