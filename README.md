@@ -1,59 +1,53 @@
-# fatek_plc_wrapper
+# modbus_wrapper
 
-Wrapper to read multiple Fatek formatted addresses via Modbus protocol
+## read
 
-List of different types can be provided, then dict with result is returned.
+List of different Modbus types can be provided in the input:
 
-main read() function is detecting type of each address of the list and associate is to proper Modbus function.
-
-Number of each function runs is optimzed by configuring following ModbusClientWrapper class parameters:
+Reading Coils, Holding registers and Discrete input:
 ```python
-    COILS_MAX_READ_SIZE = 2000
-    DISCRETE_INPUTS_MAX_READ_SIZE = 2000
-    HOLDING_REGISTERS_MAX_READ_SIZE = 125
-    INPUT_REGISTERS_MAX_READ_SIZE = 125
+>> client = ModbusClient("10.0.57.30")
+>> modbus_object_list = [20,20,30,31,32,33,33, 400800, 400801, 100300]
+>> client read(modbus_list)
+{'20': 'False', '30': 'False', '31': 'True', '32': 'True', '33': 'False', '400800': '0', '400801': '0', '100300': 'None'}
 ```
 
-## Use case:
-normally to read R100, R200, Y0, Y50 and Y99, T105 values, x6 modbus queries are requred.
+For above example only 3 modbus function calls will be executed:
 ```python
-read_coils(0, 1)
-read_coils(50, 1)
-read_coils(99, 1)
-read_coils(9105, 1)
-read_holding_registers(100, 1)
-read_holding_registers(200, 1)
+read_coils(19, 14)
+read_holding_registers(799, 2)
+read_discrete_inputs(299, 1)
 ```
 
-With configured 
+* All coils are read in one function call thanks to *MaxReadSize* and *ReadMask* parameters which can be configured in [modbus object config file](modbus_wrapper/objects/config.py)
+
 ```python
-COILS_MAX_READ_SIZE = 100
-HOLDING_REGISTERS_MAX_READ_SIZE = 101
-```
-read is optmized following reads:
-```python
-read_coils(0, 100)
-read_coils(9105, 1)
-read_holding_resters(100, 101)
+client.read(modbus_list, max_read_size=1)
 ```
 
-## Example for above scenario:
-
-for above scenario following example is returned:
+For above example, 8 functions will be executed:
 ```python
-pip install -r requirements.txt
-
-python
-
-from fatek_modbus_client import FatekModbusClient
-
-client = FatekModbusClient("192.168.10.230")
-client.read(["Y0", "T105", "Y50",  "R200", "Y99", "R100"])
-{'Y0': False, 'Y50': False, 'Y99': False, 'T105': False, 'R200': 1, 'R100': 0}
-
+read_coils(19, 1)
+read_coils(29, 1)
+read_coils(30, 1)
+read_coils(31, 1)
+read_coils(32, 1)
+read_holding_registers(799, 1)
+read_holding_registers(800, 1)
+read_discrete_inputs(299, 1)
 ```
 
-## Fatek table
+### read with range
+
+## read_modbus_objects
+
+## write
+
+## write_modbus_objects
+
+## Fatek Support 
+
+### Fatek table
 
 | Modbus | FATEK | Description |
 | ------ | ----- | -----------
