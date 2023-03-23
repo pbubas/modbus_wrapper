@@ -84,12 +84,12 @@ class ReadFunctionArgument(FunctionArgument):
         arguments = []
         for single_type in single_type_obj_list:
             addresses = [obj.address for obj in single_type.objects]
-            max_read_size = max_read_size if max_read_size else single_type.type.MAX_READ_SIZE
-            read_mask = read_mask if read_mask else single_type.type.READ_MASK
+            _max_read_size = max_read_size if max_read_size else single_type.type.MAX_READ_SIZE
+            _read_mask = read_mask if read_mask else single_type.type.READ_MASK
             calculated_read_sizes = cls._calculate_read_size(
                 addresses, 
-                max_read_size=max_read_size, 
-                read_mask=read_mask
+                max_read_size=_max_read_size, 
+                read_mask=_read_mask
                 )
 
             for result in calculated_read_sizes:

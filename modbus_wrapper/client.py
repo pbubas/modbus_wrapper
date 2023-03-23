@@ -143,17 +143,17 @@ class ModbusClientWrapper(ModbusClient):
         read_function = self._get_function(read_function_code)
         function_string = read_function.__doc__.splitlines()[0]
 
+        LOG.debug(f'executing function: "{function_string}" for argument "{argument}"')
         collected_values.update(
             {
             starting_address: read_function(starting_address, argument.size)
             }
         )
+        LOG.debug(f'results: "{collected_values[starting_address]}"')
 
         if not collected_values[starting_address]: # None means no reply from modbus target
             LOG.error(f'{function_string} failed to read {argument}')
             collected_values[starting_address] = [None for i in range(0, argument.size)] # Fill all results with None, when no reply from Modbus target
-
-        LOG.debug(f'executing function: "{function_string}" for argument "{argument}" results: "{collected_values[starting_address]}"')
 
         increment = 0
         for value in collected_values[starting_address]:
