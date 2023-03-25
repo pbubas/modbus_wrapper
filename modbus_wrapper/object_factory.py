@@ -15,7 +15,7 @@ def get_modbus_object(modbus_number: int, value_to_write: int | bool | None = No
             modbus_number = int(modbus_number)
         except ValueError:
             modbus_number = modbus_number
-        modbus_number_ok = modbus_number in object_class.NUMBER_RANGE
+        modbus_number_ok = modbus_number in object_class.NUMBER_RANGE_FAST
 
         if modbus_number_ok:
                 return object_class(modbus_number, value_to_write)
