@@ -87,10 +87,8 @@ class ModbusObject:
 
 
     def update_write_value(self, value_to_write: int | bool):
-        self.value_to_write = self.VALUE_WRITE_CLS(value_to_write) if value_to_write else None
-        return self.value_to_write
-
-
+        self.write_value = self.VALUE_WRITE_CLS(value_to_write)
+        return self.write_value
 
 
 class Coil(ModbusObject, Bool):
