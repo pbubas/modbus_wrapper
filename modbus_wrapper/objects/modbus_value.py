@@ -17,76 +17,89 @@ class BaseValue(ABC):
         pass
 
     @abstractmethod
-    def actual(self):
+    def validate(self):
         pass
 
+    def update(self, new_value: int | bool | None):
+        """method to update collected value, None values are ignored"""
+        if new_value == None:
+            self.changed = False
+            self.value = None
+            return None
+        
+        self.validate(new_value)
 
-@dataclass
-class IntValue(BaseValue):
+        previous_value = self.value
+
+        value_changed = all([previous_value != new_value, previous_value != None])
+        value_unchanged = all([previous_value == new_value, previous_value != None])
+
+        if value_changed:
+            self.changed = True
+        elif value_unchanged:
+            self.changed = False
+
+        self.value = new_value
+        return self.value
+
+    @property
+    def changed(self):
+        return self._changed
+
+    @changed.setter
+    def changed(self, change_bit: bool):
+        self._changed = change_bit
+
+
+class RegisterValue(BaseValue):
     """16bit integer for modbus registers"""
 
-    unsign_int: int #0 to 65535
-    sign_int: int #-32768 to 32767
+    def __init__(self, unsign_int: int = None):
 
-    @classmethod
-    def from_sign_int(cls, sign_int: int | None):
-        if sign_int == None:
-            return None
-
-        valid_int = lambda x:  type(x) == int
-        valid_sign_range = lambda x: -32768 <= x <= 32767
-
-        valid16bit_sign_int = lambda x: all(
-                    [valid_int(x), valid_sign_range(x)]
-                )
-
-        if not valid16bit_sign_int(sign_int): 
-            raise ModbusValueException(f'value {sign_int} invalid')
-
-        unsign_int =  sign_int & 0xffff
-        return cls(unsign_int, sign_int)
-
-    @classmethod
-    def from_unsign_int(cls, unsign_int: int | None):
-        if unsign_int == None:
-            return None
-
-        valid_int = lambda x:  type(x) == int
-        valid_unsign_range = lambda x: 0 <= x <= 0xffff
-        
-        valid16bit_unsign_int = lambda x: all(
-                    [valid_int(x), valid_unsign_range(x)]
-                )
-            
-        if not valid16bit_unsign_int(unsign_int): 
-            raise ModbusValueException(f'value {unsign_int} invalid')
-        
-        sign_int =  -(2**16 - unsign_int) if unsign_int > 32767 else unsign_int
-        return cls(unsign_int, sign_int)
+        self.validate(unsign_int)
+        self.value = unsign_int
+        self._changed: bool = None
 
     def __repr__(self):
-        return str(self.sign_int)
+        return str(self.signed)
 
     def __eq__(self, value):
-        return self.unsign_int == value
-    
+        return self.value == value
+
+    def validate(self, unsign_int):
+        if unsign_int is None:
+            return True
+
+        unsign_int.to_bytes(2, "big")
+        return True
+
     @property
-    def actual(self):
-        return self.unsign_int
+    def _in_bytes(self):
+        in_bytes = self.value.to_bytes(2, "big")
+        return in_bytes
+
+    @property
+    def signed(self):
+        signed = int.from_bytes(self._in_bytes, "big", signed=True)
+        return signed
+    
 
 
-@dataclass
-class BoolValue(BaseValue):
-    value: bool
+class CoilValue(BaseValue):
 
-    @classmethod
-    def from_bool(cls, value: bool | int | None):
-        if value == None:
-            return None
+    def __init__(self, value: bool = None):
+        self.validate(value)
+        self.value = value
+        self._changed: bool = None
+
+    def validate(self, value: bool | int | None):
+        if value is None:
+            return True
 
         if type(value) == bool or value in [0,1]:
-            return cls(value)
+            return True
         raise ModbusValueException(f'value "{value}" is not correct bool')
+        return True
 
     def __repr__(self):
         return str(self.value)
@@ -94,7 +107,6 @@ class BoolValue(BaseValue):
     def __eq__(self, value):
         return self.value == value
 
-    @property
-    def actual(self):
-        return self.value
-    
+
+if __name__ == "__main__":
+    val = IntValue(34000)

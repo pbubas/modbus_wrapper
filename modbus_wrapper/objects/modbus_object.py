@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Union
 from .. import modbus_function_code
 from .config import MaxReadSize, ReadMask, MaxWriteSize
-from .modbus_value import IntValue, BoolValue
+from .modbus_value import RegisterValue, CoilValue
 
 
 @dataclass
@@ -20,18 +20,6 @@ class TargetRangeInt:
 @dataclass
 class TargetRangeBool:
     value : bool
-
-
-class Int:
-    """modbus 16bit integer object"""
-    VALUE_READ_CLS = IntValue.from_unsign_int
-    VALUE_WRITE_CLS = IntValue.from_sign_int
-
-
-class Bool:
-    """modbus bool object"""
-    VALUE_READ_CLS = BoolValue.from_bool
-    VALUE_WRITE_CLS = BoolValue.from_bool
     
 
 class ModbusObject:
@@ -43,10 +31,9 @@ class ModbusObject:
             target_range: TargetRangeInt | TargetRangeBool = None
         ):
         self.number = modbus_number
-        self.write_value = self.VALUE_WRITE_CLS(value_to_write)
-        self.current_value = None
+        self.value_to_write = self.VALUE_CLS(value_to_write)
+        self.value = self.VALUE_CLS()
         self.target_range = target_range
-        self._changed = None
 
     def __repr__(self):
         return str(self.number)
@@ -57,41 +44,8 @@ class ModbusObject:
         first_modbus_number = self.MOBUS_NUMBER_RANGE[0]
         return self.number - first_modbus_number
 
-    @property
-    def changed(self):
-        return self._changed
 
-    @changed.setter
-    def changed(self, change_bit: bool):
-        self._changed = change_bit
-
-    def update_current_value(self, value: int | bool | None):
-        """method to update collected value, None values are ignored"""
-        if value == None:
-            self.changed = False
-            self.current_value = None
-            return None
-
-        previous_value = self.current_value
-
-        read_value_changed = all([previous_value != value, previous_value != None])
-        read_value_unchanged = all([previous_value == value, previous_value != None])
-
-        if read_value_changed:
-            self.changed = True
-        elif read_value_unchanged:
-            self.changed = False
-
-        self.current_value = self.VALUE_READ_CLS(value)
-        return self.current_value
-
-
-    def update_write_value(self, value_to_write: int | bool):
-        self.write_value = self.VALUE_WRITE_CLS(value_to_write)
-        return self.write_value
-
-
-class Coil(ModbusObject, Bool):
+class Coil(ModbusObject):
     """Coil modbus object """
     MAX_READ_SIZE = MaxReadSize.COIL
     READ_MASK = ReadMask.COIL
@@ -104,9 +58,10 @@ class Coil(ModbusObject, Bool):
         modbus_function_code.WRITE_SINGLE_COIL,
         modbus_function_code.WRITE_MULTIPLE_COILS
     )
+    VALUE_CLS = CoilValue
 
 
-class DiscreteInput(ModbusObject, Bool):
+class DiscreteInput(ModbusObject):
     """Discrete Input modbus object """
     MAX_READ_SIZE = MaxReadSize.DISCRETE_INPUT
     READ_MASK = ReadMask.DISCRETE_INPUT
@@ -117,9 +72,10 @@ class DiscreteInput(ModbusObject, Bool):
     FUNCTION_CODE = FunctionCode(
         modbus_function_code.READ_DISCRETE_INPUTS,
     )
+    VALUE_CLS = CoilValue
 
 
-class InputRegister(ModbusObject, Int):
+class InputRegister(ModbusObject):
     """Input Register modbus object """
     MAX_READ_SIZE = MaxReadSize.INPUT_REGISTER
     READ_MASK = ReadMask.INPUT_REGISTER
@@ -129,9 +85,10 @@ class InputRegister(ModbusObject, Int):
     FUNCTION_CODE = FunctionCode(
         modbus_function_code.READ_INPUT_REGISTERS,
     )
+    VALUE_CLS = RegisterValue
 
 
-class HoldingRegister(ModbusObject, Int):
+class HoldingRegister(ModbusObject):
     """Holding Register modbus object """
     MAX_READ_SIZE = MaxReadSize.HOLDING_REGISTER
     READ_MASK = ReadMask.HOLDING_REGISTER
@@ -144,6 +101,7 @@ class HoldingRegister(ModbusObject, Int):
         modbus_function_code.WRITE_SINGLE_HOLDING_REGISTER,
         modbus_function_code.WRITE_MULTIPLE_HOLDING_REGISTERS,
     )
+    VALUE_CLS = RegisterValue
 
 
 

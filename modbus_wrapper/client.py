@@ -48,7 +48,7 @@ class ModbusClientWrapper(ModbusClient):
 
         self.read_modbus_objects(modbus_objects, *args, **kwargs)
 
-        result = {obj.__repr__():obj.current_value.__repr__() for obj in modbus_objects}
+        result = {obj.__repr__():obj.value.__repr__() for obj in modbus_objects}
 
         return result
     
@@ -76,7 +76,7 @@ class ModbusClientWrapper(ModbusClient):
 
         self.write_modbus_objects(modbus_objects)
 
-        result = {obj.__repr__():obj.current_value.__repr__() for obj in modbus_objects}
+        result = {obj.__repr__():obj.value.__repr__() for obj in modbus_objects}
 
         return result
 
@@ -102,7 +102,7 @@ class ModbusClientWrapper(ModbusClient):
         write_ok = write_function(starting_address, values_to_write)
         objects = write_argument.object_list.objects
         if write_ok:
-            [obj.update_current_value(obj.write_value.actual) for obj in objects]
+            [obj.value.update(obj.value_to_write.value) for obj in objects]
         else:
             LOG.error(f'failed to write "{function_string}" for argument: "{write_argument}"')
 
@@ -161,7 +161,7 @@ class ModbusClientWrapper(ModbusClient):
             increment+=1
 
         for object in argument.object_list.objects:
-            object.update_current_value(
+            object.value.update(
                 collected_values[object.address]
                 )
 
