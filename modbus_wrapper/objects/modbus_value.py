@@ -7,18 +7,19 @@ class ModbusValueException(Exception):
 class BaseValue(ABC):
     """Base Value class for modbus objects"""
 
-
     @abstractmethod
     def __repr__(self):
         pass
 
     @abstractmethod
-    def __eq__(self, value):
-        pass
-
-    @abstractmethod
     def validate(self):
         pass
+
+    def __eq__(self, value):
+        return self.value == value
+
+    def __bool__(self):
+        return False if self.value is None else True
 
     def update(self, new_value: int | bool | None):
         """method to update collected value, None values are ignored"""
@@ -63,9 +64,6 @@ class RegisterValue(BaseValue):
     def __repr__(self):
         return str(self.signed)
 
-    def __eq__(self, value):
-        return self.value == value
-
     def validate(self, unsign_int):
         if unsign_int is None:
             return True
@@ -75,15 +73,17 @@ class RegisterValue(BaseValue):
 
     @property
     def _in_bytes(self):
-        in_bytes = self.value.to_bytes(2, "big")
-        return in_bytes
+        if self.value: 
+            in_bytes = self.value.to_bytes(2, "big")
+            return in_bytes
 
     @property
     def signed(self):
+        if self.value is None: return None
+        if self.value == 0: return 0
         signed = int.from_bytes(self._in_bytes, "big", signed=True)
         return signed
     
-
 
 class CoilValue(BaseValue):
 
@@ -104,9 +104,3 @@ class CoilValue(BaseValue):
     def __repr__(self):
         return str(self.value)
 
-    def __eq__(self, value):
-        return self.value == value
-
-
-if __name__ == "__main__":
-    val = IntValue(34000)
