@@ -31,8 +31,8 @@ class ModbusObject:
             target_range: TargetRangeInt | TargetRangeBool = None
         ):
         self.number = modbus_number
-        self.value_to_write = self.VALUE_CLS(value_to_write)
-        self.value = self.VALUE_CLS()
+        self.current = self.VALUE_CLS()   
+        self.write = self.VALUE_CLS(value_to_write)   
         self.target_range = target_range
 
     def __repr__(self):
