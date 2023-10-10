@@ -1,4 +1,4 @@
-pyModbus
+pymodbus
 pyserial
 build
 twine
