@@ -5,22 +5,16 @@ from .config import MaxReadSize, ReadMask, MaxWriteSize
 from .modbus_value import RegisterValue, CoilValue
 
 
+class ModbusUnitAddressException(Exception):
+    pass
+
+
 @dataclass
 class FunctionCode:
     read: Union[int, hex]
     write: Union[int, hex] = None
     multi_write: Union[int, hex] = None
 
-@dataclass
-class TargetRangeInt:
-    low: int
-    high: int
-
-
-@dataclass
-class TargetRangeBool:
-    value : bool
-    
 
 class ModbusObject:
     """Modbus object basic class"""
@@ -28,15 +22,20 @@ class ModbusObject:
     def __init__(
             self, modbus_number: int,
             value_to_write: int | bool = None,
-            target_range: TargetRangeInt | TargetRangeBool = None
+            unit: int = 0
         ):
         self.number = modbus_number
         self.current = self.VALUE_CLS()   
-        self.write = self.VALUE_CLS(value_to_write)   
-        self.target_range = target_range
+        self.write = self.VALUE_CLS(value_to_write)
+        self.unit = unit
+        self._validate_unit()
 
     def __repr__(self):
         return str(self.number)
+    
+    def _validate_unit(self):
+        if not self.unit in range(0,256):
+            raise ModbusUnitAddressException(f'unit address "{self.unit}" is not in valid range')
 
     @property
     def address(self):

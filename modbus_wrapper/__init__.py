@@ -1,2 +1,8 @@
 
-from modbus_wrapper.client import ModbusClientWrapper as ModbusClient
+from modbus_wrapper.clients import (
+    AsyncModbusUdpClientWrapper,
+    AsyncModbusTcpClientWrapper,
+    ModbusTcpClientWrapper,
+    ModbusUdpClientWrapper,
+    ModbusSerialClientWrapper
+)

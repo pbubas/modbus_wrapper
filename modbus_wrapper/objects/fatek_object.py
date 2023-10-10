@@ -6,10 +6,23 @@ from .modbus_object import (
 class FatekObject:
     """Basic Fatek Object"""
 
-    def __init__(self, fatek_number: str, value_to_write: int | bool = None):
+    def __init__(
+        self, 
+        fatek_number: str,
+        value_to_write: int | bool = None,
+        unit: int = 0,
+        *args, 
+        **kwargs,
+        ):
         self.fatek_number = fatek_number
         modbus_number = self.FATEK_MAP[self.fatek_number]
-        super().__init__(modbus_number, value_to_write)
+        super().__init__(
+            modbus_number,
+            value_to_write,
+            unit,
+            *args,
+            **kwargs
+            )
 
     def __repr__(self):
         return str(self.fatek_number)

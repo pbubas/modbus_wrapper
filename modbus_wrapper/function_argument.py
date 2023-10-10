@@ -1,35 +1,52 @@
+import logging
 from dataclasses import dataclass
 from typing import List, Type
+from collections import namedtuple
 from .objects import ModbusObject
 
-class ModbusObjectListUniqueException(Exception):
+LOG = logging.getLogger(__name__)
+
+class CommonModbusObjectsUniqueException(Exception):
     pass
 
 class ModbusWriteValueException(Exception):
     pass
 
 @dataclass
-class ModbusObjectList:
+class CommonModbusObjects:
+    '''Modbus objects of common type and unit address'''
     type: Type
+    unit: int
     objects: List[ModbusObject]
 
     def __post_init__(self):
         for obj in self.objects:
             if type(obj) != self.type:
-                raise ModbusObjectListUniqueException(f'Modbus object {obj} is not type of {self.objects_type}')
+                raise CommonModbusObjectsUniqueException(f'Modbus object {obj} is not type of {self.type}')
+            if obj.unit != self.unit:
+                raise CommonModbusObjectsUniqueException(f'Modbus object {obj} is different unit address {self.unit}')
+
 
 
     @classmethod
-    def get_single_type_objects(cls, modbus_objects: List[ModbusObject]) -> list:
-        modbus_object_types = list({type(i) for i in modbus_objects})
+    def get_common_modbus_objects(cls, modbus_objects: List[ModbusObject]) -> List:
+        '''returns list of CommonModbusObjects'''
+        ModbusObjectTypesPerUnit = namedtuple("ModbusObjectTypesPerUnit", ["type", "unit"])
+        unique_types_per_unit = list(
+                {
+                    ModbusObjectTypesPerUnit(type(i), i.unit) 
+                    for i in modbus_objects
+                }
+            )
         list_to_return = []
-        for object_type in modbus_object_types:
-            is_type = lambda obj: type(obj) == object_type
-            single_type_modbus_objects = list(filter(is_type, modbus_objects))
+        for unique in unique_types_per_unit:
+            match_unique = lambda obj: type(obj) == unique.type and obj.unit == unique.unit
+            single_type_modbus_objects = list(filter(match_unique, modbus_objects))
             list_to_return.append(
-                cls(object_type, single_type_modbus_objects)
+                cls(unique.type, unique.unit, single_type_modbus_objects)
             )
         return list_to_return
+
 
 class FunctionArgument:
     def _calculate_read_size(addresses, max_read_size: int = 1, read_mask: int = 1) -> List[dict]:
@@ -69,7 +86,9 @@ class FunctionArgument:
 class ReadFunctionArgument(FunctionArgument):
     starting_address: int
     size: int
-    object_list: ModbusObjectList
+    unit: int
+    type: type
+    objects: List[ModbusObject]
 
     @classmethod
     def get_arguments(
@@ -80,12 +99,12 @@ class ReadFunctionArgument(FunctionArgument):
     ) -> list:
         """Function to get read arguments for modbus function from Modbus Objects"""
 
-        single_type_obj_list = ModbusObjectList.get_single_type_objects(modbus_objects)
+        common_modbus_objects = CommonModbusObjects.get_common_modbus_objects(modbus_objects)
         arguments = []
-        for single_type in single_type_obj_list:
-            addresses = [obj.address for obj in single_type.objects]
-            _max_read_size = max_read_size if max_read_size else single_type.type.MAX_READ_SIZE
-            _read_mask = read_mask if read_mask else single_type.type.READ_MASK
+        for common in common_modbus_objects:
+            addresses = [obj.address for obj in common.objects]
+            _max_read_size = max_read_size if max_read_size else common.type.MAX_READ_SIZE
+            _read_mask = read_mask if read_mask else common.type.READ_MASK
             calculated_read_sizes = cls._calculate_read_size(
                 addresses, 
                 max_read_size=_max_read_size, 
@@ -96,12 +115,20 @@ class ReadFunctionArgument(FunctionArgument):
                 staring_address = result["starting_address"]
                 size = result["size"]
                 addresses = result["addresses"]
-                object_list = ModbusObjectList(
-                    single_type.type,
-                    [obj for obj in single_type.objects if obj.address in addresses]
+                object_list = CommonModbusObjects(
+                    common.type,
+                    common.unit,
+                    [obj for obj in common.objects if obj.address in addresses]
                 )
-                argument = cls(staring_address, size, object_list)
-                arguments.append(argument)
+                arguments.append(
+                    cls(
+                        staring_address,
+                        size, 
+                        common.unit,
+                        common.type, 
+                        object_list.objects
+                        )
+                    )
 
         return arguments
 
@@ -110,7 +137,9 @@ class WriteFunctionArgument(FunctionArgument):
     starting_address: int
     values_to_write: List[int | bool] | int | bool
     write_function_code: int
-    object_list: ModbusObjectList
+    unit: int
+    type: type
+    objects: List[ModbusObject]
 
 
     @classmethod
@@ -118,11 +147,13 @@ class WriteFunctionArgument(FunctionArgument):
         """Function to get read arguments for modbus function from Modbus Objects"""
 
         arguments = []
-        single_type_obj_list = ModbusObjectList.get_single_type_objects(modbus_objects)
+        modbus_objects = filter(cls._filter_write_values, modbus_objects)
+        
+        common_modbus_objects = CommonModbusObjects.get_common_modbus_objects(list(modbus_objects))
 
-        for single_type in single_type_obj_list:
-            addresses = [obj.address for obj in single_type.objects]
-            max_write_size = max_write_size if max_write_size else single_type.type.MAX_READ_SIZE
+        for common in common_modbus_objects:
+            addresses = [obj.address for obj in common.objects]
+            max_write_size = max_write_size if max_write_size else common.type.MAX_READ_SIZE
             read_mask = 1
             calculated_write_sizes = cls._calculate_read_size(
                 addresses, 
@@ -136,10 +167,10 @@ class WriteFunctionArgument(FunctionArgument):
                 ending_address = starting_address + number_of_values_to_write
                 get_write_value_for_address = lambda address: next(
                         obj.write.value
-                        for obj in single_type.objects 
+                        for obj in common.objects 
                         if obj.address == address
                         )
-                get_objets_for_address = lambda address: next(obj for obj in single_type.objects if obj.address == address)
+                get_objets_for_address = lambda address: next(obj for obj in common.objects if obj.address == address)
                 addresses_range = range(starting_address, ending_address)
 
                 values_to_write = list(
@@ -149,24 +180,34 @@ class WriteFunctionArgument(FunctionArgument):
                 single_value_to_write = len(values_to_write) == 1
                 if single_value_to_write:
                     values_to_write=values_to_write[0]
-                    write_function_code=single_type.type.FUNCTION_CODE.write
+                    write_function_code=common.type.FUNCTION_CODE.write
                 else:
-                    write_function_code=single_type.type.FUNCTION_CODE.multi_write
+                    write_function_code=common.type.FUNCTION_CODE.multi_write
 
-                object_list = ModbusObjectList(
-                    single_type.type,
+                object_list = CommonModbusObjects(
+                    common.type,
+                    common.unit,
                     list(map(get_objets_for_address, addresses_range))
                 )
 
-                arguments.append(WriteFunctionArgument(
-                    starting_address,
-                    object_list=object_list,
-                    write_function_code=write_function_code,
-                    values_to_write=values_to_write
+                arguments.append(
+                    cls(
+                        starting_address,
+                        values_to_write,
+                        write_function_code,
+                        object_list.unit,
+                        object_list.type,
+                        object_list.objects,
                     )
                 )
 
         return arguments
 
+    @staticmethod
+    def _filter_write_values(modbus_object: ModbusObject) -> bool:
+        if modbus_object.write:
+            return True
+        LOG.warning(f"modbus object {modbus_object} does not contain write value and is excluded from write operation")
+        return
         
         
