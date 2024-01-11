@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 class ModbusValueException(Exception):
     pass
@@ -29,6 +30,8 @@ class BaseValue(ABC):
             return None
         
         self.validate(new_value)
+        
+        self.timestamp = datetime.utcnow().isoformat()
 
         previous_value = self.value
 
@@ -59,6 +62,7 @@ class RegisterValue(BaseValue):
 
         self.validate(unsign_int)
         self.value = unsign_int
+        self.timestamp = None
         self._changed: bool = None
 
     def __repr__(self):
@@ -90,6 +94,7 @@ class CoilValue(BaseValue):
     def __init__(self, value: bool = None):
         self.validate(value)
         self.value = value
+        self.timestamp = None
         self._changed: bool = None
 
     def validate(self, value: bool | int | None):
@@ -99,7 +104,6 @@ class CoilValue(BaseValue):
         if type(value) == bool or value in [0,1]:
             return True
         raise ModbusValueException(f'value "{value}" is not correct bool')
-        return True
 
     def __repr__(self):
         return str(self.value)
