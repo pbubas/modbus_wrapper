@@ -1,5 +1,5 @@
-pymodbus
-pyserial
-build
-twine
-pytest
+pymodbus==3.6.9
+build==1.2.2.post1
+twine==6.0.1
+pyserial==3.5
+pytest==8.3.4
