@@ -100,9 +100,9 @@ class AsyncModbusBaseClientWrapper(ModbusBaseClientWrapper):
         self._pre_logging(argument, function_string)
         
         read_result = await read_function(
-            argument.starting_address,
-            argument.size,
-            argument.unit
+            address = argument.starting_address,
+            count = argument.size,
+            slave = argument.unit
             )
         
         self._update_objects_with_collected_values(
