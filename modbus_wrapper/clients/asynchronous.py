@@ -111,10 +111,14 @@ class AsyncModbusBaseClientWrapper(ModbusBaseClientWrapper):
             function_string
         )
 
-class AsyncModbusTcpClientWrapper(AsyncModbusBaseClientWrapper, AsyncModbusTcpClient):
-    pass
+class AsyncModbusTcpClientWrapper(AsyncModbusTcpClient, AsyncModbusBaseClientWrapper):
+    def __init__(self, host='localhost', port=502, *args, **kwargs):
+        AsyncModbusTcpClient.__init__(self, host=host, port=port, *args, **kwargs)
+        AsyncModbusBaseClientWrapper.__init__(self)
 
 
-class AsyncModbusUdpClientWrapper(AsyncModbusBaseClientWrapper, AsyncModbusUdpClient):
-    pass
+class AsyncModbusUdpClientWrapper(AsyncModbusUdpClient, AsyncModbusBaseClientWrapper):
+    def __init__(self, host='localhost', port=502, *args, **kwargs):
+        AsyncModbusUdpClient.__init__(self, host=host, port=port, *args, **kwargs)
+        AsyncModbusBaseClientWrapper.__init__(self)
 

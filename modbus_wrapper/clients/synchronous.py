@@ -4,19 +4,20 @@ from .. import modbus_function_code
 
 
 
-class ModbusTcpClientWrapper(ModbusBaseClientWrapper, ModbusTcpClient):
-    pass
+class ModbusTcpClientWrapper(ModbusTcpClient, ModbusBaseClientWrapper):
+
+    def __init__(self, host='localhost', port=502, *args, **kwargs):
+        ModbusTcpClient.__init__(self, host=host, port=port, *args, **kwargs)
+        ModbusBaseClientWrapper.__init__(self)
 
 
-class ModbusUdpClientWrapper(ModbusBaseClientWrapper, ModbusUdpClient):
-    pass
+class ModbusUdpClientWrapper(ModbusUdpClient, ModbusBaseClientWrapper):
+    def __init__(self, host='localhost', port=502, *args, **kwargs):
+        ModbusUdpClient.__init__(self, host=host, port=port, *args, **kwargs)
+        ModbusBaseClientWrapper.__init__(self)
 
 
-class ModbusSerialClientWrapper(ModbusBaseClientWrapper, ModbusSerialClient):
-    pass
-
-
-class ModbusSerialClientWrapper(ModbusBaseClientWrapper, ModbusSerialClient):
+class ModbusSerialClientWrapper(ModbusSerialClient, ModbusBaseClientWrapper):
     def __init__(
         self, 
         port,
@@ -41,13 +42,4 @@ class ModbusSerialClientWrapper(ModbusBaseClientWrapper, ModbusSerialClient):
                 **kwargs
                 )        
       
-        self.function_map = {
-            modbus_function_code.READ_COILS: self.read_coils,
-            modbus_function_code.READ_HOLDING_REGISTERS: self.read_holding_registers,
-            modbus_function_code.READ_DISCRETE_INPUTS: self.read_discrete_inputs,
-            modbus_function_code.READ_INPUT_REGISTERS: self.read_input_registers,
-            modbus_function_code.WRITE_SINGLE_COIL: self.write_coil,
-            modbus_function_code.WRITE_SINGLE_HOLDING_REGISTER: self.write_register,
-            modbus_function_code.WRITE_MULTIPLE_COILS: self.write_coils,
-            modbus_function_code.WRITE_MULTIPLE_HOLDING_REGISTERS: self.write_registers
-         }
+        ModbusBaseClientWrapper.__init__(self)

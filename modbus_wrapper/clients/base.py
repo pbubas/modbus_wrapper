@@ -3,8 +3,7 @@ from typing import List
 from .. import modbus_function_code 
 from ..object_factory import ModbusObject, get_modbus_object, get_modbus_object_from_range
 from ..function_argument import ReadFunctionArgument, WriteFunctionArgument
-from pymodbus.pdu import ModbusResponse
-
+from pymodbus.pdu.bit_message import ModbusPDU
 
 LOG = logging.getLogger(__name__)
 
@@ -19,9 +18,7 @@ class ObjectNonWriteable(Exception):
 
 class ModbusBaseClientWrapper:
 
-    def __init__(self, host='localhost', port=502, *args, **kwargs):
-        super().__init__(host, port, *args, **kwargs)
-        
+    def __init__(self):
         self.function_map = {
             modbus_function_code.READ_COILS: self.read_coils,
             modbus_function_code.READ_HOLDING_REGISTERS: self.read_holding_registers,
@@ -91,7 +88,7 @@ class ModbusBaseClientWrapper:
 
     def _update_objects_with_write_values(
             self,
-            write_response: ModbusResponse,
+            write_response: ModbusPDU,
             write_argument: WriteFunctionArgument,
             function_string: str
         ) -> None:
@@ -129,7 +126,7 @@ class ModbusBaseClientWrapper:
     def _update_objects_with_collected_values(
             self,
             argument: ReadFunctionArgument,
-            read_result: ModbusResponse,
+            read_result: ModbusPDU,
             function_string: str,
         ) -> bool:
         
@@ -161,11 +158,10 @@ class ModbusBaseClientWrapper:
         read_function = self._get_function(argument.type.FUNCTION_CODE.read)
         function_string = read_function.__doc__.splitlines()[0]
         self._pre_logging(argument, function_string)
-        
         read_result = read_function(
-            argument.starting_address,
-            argument.size,
-            argument.unit
+            address=argument.starting_address,
+            count=argument.size,
+            slave=argument.unit
             )
         
         self._update_objects_with_collected_values(
