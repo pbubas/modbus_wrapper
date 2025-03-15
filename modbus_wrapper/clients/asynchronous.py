@@ -2,7 +2,7 @@ import logging
 import asyncio
 from typing import List
 from pymodbus.client import AsyncModbusTcpClient, AsyncModbusUdpClient
-from .base import ModbusBaseClientWrapper
+from .base import ModbusBaseClientWrapper, ModbusConnectionError, ModbusException, ModbusPDU
 from ..object_factory import get_modbus_object_from_range, get_modbus_object
 from ..function_argument import WriteFunctionArgument, ReadFunctionArgument
 from ..objects import ModbusObject
@@ -41,10 +41,12 @@ class AsyncModbusBaseClientWrapper(ModbusBaseClientWrapper):
             read_mask=read_mask
             )
 
-        async with self as client:
+        async with self:
+            if not self.connected:
+                raise ModbusConnectionError("Modbus connection not established")
             tasks = []
             for arg in arguments: 
-                tasks.append(asyncio.create_task(client._read(arg)))
+                tasks.append(asyncio.create_task(self._read(arg)))
                 
             results = asyncio.gather(*tasks)
             await results
@@ -63,7 +65,9 @@ class AsyncModbusBaseClientWrapper(ModbusBaseClientWrapper):
                                         modbus_objects,
                                         )
 
-        async with self as client:
+        async with self:
+            if not self.connected:
+                raise ModbusConnectionError("Modbus connection not established")
             tasks = []
             for arg in arguments: 
                 tasks.append(asyncio.create_task(self._write(arg)))
@@ -78,11 +82,13 @@ class AsyncModbusBaseClientWrapper(ModbusBaseClientWrapper):
         function_string = write_function.__doc__.splitlines()[0]
         self._pre_logging(write_argument, function_string)
 
-        write_response = await write_function(
+        write_response: ModbusPDU = await write_function(
             write_argument.starting_address,
             write_argument.values_to_write, 
             write_argument.unit
             )
+        if write_response.isError() and self.raise_on_error:
+            raise ModbusException(write_response)
 
         self._update_objects_with_write_values(
             write_response,
@@ -99,11 +105,13 @@ class AsyncModbusBaseClientWrapper(ModbusBaseClientWrapper):
 
         self._pre_logging(argument, function_string)
         
-        read_result = await read_function(
+        read_result: ModbusPDU = await read_function(
             address = argument.starting_address,
             count = argument.size,
             slave = argument.unit
             )
+        if read_result.isError() and self.raise_on_error:
+            raise ModbusException(read_result)
         
         self._update_objects_with_collected_values(
             argument,
@@ -112,13 +120,13 @@ class AsyncModbusBaseClientWrapper(ModbusBaseClientWrapper):
         )
 
 class AsyncModbusTcpClientWrapper(AsyncModbusTcpClient, AsyncModbusBaseClientWrapper):
-    def __init__(self, host='localhost', port=502, *args, **kwargs):
+    def __init__(self, host='localhost', port=502, raise_on_error: bool = False, *args, **kwargs):
         AsyncModbusTcpClient.__init__(self, host=host, port=port, *args, **kwargs)
-        AsyncModbusBaseClientWrapper.__init__(self)
+        AsyncModbusBaseClientWrapper.__init__(self, raise_on_error)
 
 
 class AsyncModbusUdpClientWrapper(AsyncModbusUdpClient, AsyncModbusBaseClientWrapper):
-    def __init__(self, host='localhost', port=502, *args, **kwargs):
+    def __init__(self, host='localhost', port=502, raise_on_error: bool = False,  *args, **kwargs):
         AsyncModbusUdpClient.__init__(self, host=host, port=port, *args, **kwargs)
-        AsyncModbusBaseClientWrapper.__init__(self)
+        AsyncModbusBaseClientWrapper.__init__(self, raise_on_error)
 

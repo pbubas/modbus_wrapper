@@ -6,15 +6,15 @@ from .. import modbus_function_code
 
 class ModbusTcpClientWrapper(ModbusTcpClient, ModbusBaseClientWrapper):
 
-    def __init__(self, host='localhost', port=502, *args, **kwargs):
+    def __init__(self, host='localhost', port=502, raise_on_error: bool = False, *args, **kwargs):
         ModbusTcpClient.__init__(self, host=host, port=port, *args, **kwargs)
-        ModbusBaseClientWrapper.__init__(self)
+        ModbusBaseClientWrapper.__init__(self, raise_on_error)
 
 
 class ModbusUdpClientWrapper(ModbusUdpClient, ModbusBaseClientWrapper):
-    def __init__(self, host='localhost', port=502, *args, **kwargs):
+    def __init__(self, host='localhost', port=502, raise_on_error: bool = False, *args, **kwargs):
         ModbusUdpClient.__init__(self, host=host, port=port, *args, **kwargs)
-        ModbusBaseClientWrapper.__init__(self)
+        ModbusBaseClientWrapper.__init__(self, raise_on_error)
 
 
 class ModbusSerialClientWrapper(ModbusSerialClient, ModbusBaseClientWrapper):
@@ -26,6 +26,7 @@ class ModbusSerialClientWrapper(ModbusSerialClient, ModbusBaseClientWrapper):
         parity="N",
         stopbits=1,
         timeout=1,
+        raise_on_error: bool = False,
         *args, 
         **kwargs
                  ):
@@ -42,4 +43,4 @@ class ModbusSerialClientWrapper(ModbusSerialClient, ModbusBaseClientWrapper):
                 **kwargs
                 )        
       
-        ModbusBaseClientWrapper.__init__(self)
+        ModbusBaseClientWrapper.__init__(self, raise_on_error)

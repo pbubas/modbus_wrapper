@@ -4,6 +4,7 @@ from .. import modbus_function_code
 from ..object_factory import ModbusObject, get_modbus_object, get_modbus_object_from_range
 from ..function_argument import ReadFunctionArgument, WriteFunctionArgument
 from pymodbus.pdu.bit_message import ModbusPDU
+from pymodbus.pdu.pdu import ExceptionResponse
 
 LOG = logging.getLogger(__name__)
 
@@ -11,14 +12,24 @@ LOG = logging.getLogger(__name__)
 class FunctionUnknow(Exception):
     pass
 
-
 class ObjectNonWriteable(Exception):
     pass
+
+class ModbusConnectionError(Exception):
+    pass
+
+class ModbusException(Exception):
+    def __init__(self, response: ExceptionResponse):
+        self.response = response
+
+    def __str__(self):
+        return f"{self.response.function_code} Code: {self.response.exception_code}"
 
 
 class ModbusBaseClientWrapper:
 
-    def __init__(self):
+    def __init__(self, raise_on_error):
+        self.raise_on_error = raise_on_error
         self.function_map = {
             modbus_function_code.READ_COILS: self.read_coils,
             modbus_function_code.READ_HOLDING_REGISTERS: self.read_holding_registers,
@@ -57,7 +68,9 @@ class ModbusBaseClientWrapper:
             read_mask=read_mask
             )
 
-        with self as client:
+        with self:
+            if not self.connected:
+                raise ModbusConnectionError("Modbus connection not established")
             for arg in arguments: self._read(arg)
 
 
@@ -74,7 +87,9 @@ class ModbusBaseClientWrapper:
                                         modbus_objects,
                                         )
 
-        with self as client:
+        with self:
+            if not self.connected:
+                raise ModbusConnectionError("Modbus connection not established")
             for arg in arguments: 
                 self._write(arg)
 
@@ -110,11 +125,13 @@ class ModbusBaseClientWrapper:
         function_string = write_function.__doc__.splitlines()[0]
         self._pre_logging(write_argument, function_string)
 
-        write_response = write_function(
+        write_response: ModbusPDU = write_function(
             write_argument.starting_address,
             write_argument.values_to_write, 
             write_argument.unit
             )
+        if write_response.isError() and self.raise_on_error:
+            raise ModbusException(write_response)
 
         self._update_objects_with_write_values(
             write_response,
@@ -158,11 +175,13 @@ class ModbusBaseClientWrapper:
         read_function = self._get_function(argument.type.FUNCTION_CODE.read)
         function_string = read_function.__doc__.splitlines()[0]
         self._pre_logging(argument, function_string)
-        read_result = read_function(
+        read_result: ModbusPDU = read_function(
             address=argument.starting_address,
             count=argument.size,
             slave=argument.unit
             )
+        if read_result.isError() and self.raise_on_error:
+            raise ModbusException(read_result)
         
         self._update_objects_with_collected_values(
             argument,
