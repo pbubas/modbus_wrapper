@@ -3,7 +3,7 @@ import asyncio
 from typing import List
 from pymodbus.client import AsyncModbusTcpClient, AsyncModbusUdpClient
 from .base import ModbusBaseClientWrapper, ModbusConnectionError, ModbusException, ModbusPDU
-from ..object_factory import get_modbus_object_from_range, get_modbus_object
+from ..object_factory import get_modbus_object
 from ..function_argument import WriteFunctionArgument, ReadFunctionArgument
 from ..objects import ModbusObject
 

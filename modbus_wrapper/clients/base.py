@@ -5,6 +5,9 @@ from ..object_factory import ModbusObject, get_modbus_object, get_modbus_object_
 from ..function_argument import ReadFunctionArgument, WriteFunctionArgument
 from pymodbus.pdu.bit_message import ModbusPDU
 from pymodbus.pdu.pdu import ExceptionResponse
+from pymodbus import pymodbus_apply_logging_config
+
+pymodbus_apply_logging_config(level=logging.ERROR)
 
 LOG = logging.getLogger(__name__)
 
