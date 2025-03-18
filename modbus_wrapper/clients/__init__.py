@@ -1,10 +1,11 @@
 from .synchronous import (
     ModbusTcpClientWrapper,
     ModbusUdpClientWrapper,
-    ModbusSerialClientWrapper
-    )
+    ModbusSerialClientWrapper,
+)
 
 from .asynchronous import (
     AsyncModbusTcpClientWrapper,
-    AsyncModbusUdpClientWrapper
-    ) 
+    AsyncModbusUdpClientWrapper,
+    AsyncModbusSerialClientWrapper,
+)

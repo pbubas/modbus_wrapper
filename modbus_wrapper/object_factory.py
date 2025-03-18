@@ -5,17 +5,20 @@ from typing import List
 class ModbusObjectValidation(Exception):
     pass
 
+
 def all_subclasses(cls):
     return set(cls.__subclasses__()).union(
-        [s for c in cls.__subclasses__() for s in all_subclasses(c)])
+        [s for c in cls.__subclasses__() for s in all_subclasses(c)]
+    )
+
 
 def get_modbus_object(
     modbus_number: int,
     value_to_write: int | bool = None,
     unit: int = 0,
-    *args, 
-    **kwargs
-    ) -> ModbusObject:
+    *args,
+    **kwargs,
+) -> ModbusObject:
     for object_class in all_subclasses(ModbusObject):
         try:
             modbus_number = int(modbus_number)
@@ -24,24 +27,20 @@ def get_modbus_object(
         modbus_number_ok = modbus_number in object_class.NUMBER_RANGE_FAST
 
         if modbus_number_ok:
-                return object_class(
-                    modbus_number,
-                    value_to_write,
-                    unit,
-                    *args,
-                    **kwargs)
-        
-    raise ModbusObjectValidation(f'provided number {modbus_number} is not valid Modbus object')
+            return object_class(modbus_number, value_to_write, unit, *args, **kwargs)
+
+    raise ModbusObjectValidation(
+        f"provided number {modbus_number} is not valid Modbus object"
+    )
+
 
 def get_modbus_object_from_range(
-    number_range: str,
-    unit: int = 0
-    ) -> List[ModbusObject]:
-    """
-    """
+    number_range: str, unit: int = 0
+) -> List[ModbusObject]:
+    """ """
 
-    first_object_number = number_range.split('-')[0]
-    last_object_number = number_range.split('-')[1]
+    first_object_number = number_range.split("-")[0]
+    last_object_number = number_range.split("-")[1]
 
     try:
         first_object_number = int(first_object_number)
@@ -57,9 +56,7 @@ def get_modbus_object_from_range(
 
     objects_in_range = []
 
-    for number in range(index_of_first_obj, index_of_last_obj+1):
-        objects_in_range.append(
-            get_modbus_object(all_numbers[number], None, unit)
-        )
+    for number in range(index_of_first_obj, index_of_last_obj + 1):
+        objects_in_range.append(get_modbus_object(all_numbers[number], None, unit))
 
     return objects_in_range

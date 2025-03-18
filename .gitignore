@@ -6,3 +6,4 @@ mytest*
 dist
 *egg-info
 .env
+build

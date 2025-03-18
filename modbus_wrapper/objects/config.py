@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+
 @dataclass
 class MaxReadSize:
     COIL = 2000
@@ -7,12 +8,14 @@ class MaxReadSize:
     INPUT_REGISTER = 125
     HOLDING_REGISTER = 125
 
+
 @dataclass
 class ReadMask:
-    COIL = 0xffff
-    DISCRETE_INPUT = 0xffff
-    INPUT_REGISTER = 0xffff
-    HOLDING_REGISTER = 0xffff
+    COIL = 0xFFFF
+    DISCRETE_INPUT = 0xFFFF
+    INPUT_REGISTER = 0xFFFF
+    HOLDING_REGISTER = 0xFFFF
+
 
 @dataclass
 class MaxWriteSize:
