@@ -1,6 +1,5 @@
-from dataclasses import dataclass
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class ModbusValueException(Exception):
@@ -9,6 +8,13 @@ class ModbusValueException(Exception):
 
 class BaseValue(ABC):
     """Base Value class for modbus objects"""
+
+    def __init__(self, value):
+        self.validate(value)
+        self.value: int | bool | None = value
+        self.changed: bool = None
+        self._update_last_read_time()
+
 
     @abstractmethod
     def __repr__(self):
@@ -29,11 +35,13 @@ class BaseValue(ABC):
         if new_value == None:
             self.changed = False
             self.value = None
+            self.last_read_time = None
+            self.last_read_timestamp = None
             return None
 
         self.validate(new_value)
 
-        self.timestamp = datetime.utcnow().isoformat()
+        self._update_last_read_time()
 
         previous_value = self.value
 
@@ -56,16 +64,28 @@ class BaseValue(ABC):
     def changed(self, change_bit: bool):
         self._changed = change_bit
 
+    @property
+    def timestamp(self):
+        return self._last_read_time
+    
+    @property
+    def last_read_time(self):
+        return self._last_read_time
+    
+    @property
+    def last_read_timestamp(self):
+        return self._last_read_timestamp
+    
+    def _update_last_read_time(self):
+        self._last_read_time = datetime.now(timezone.utc).isoformat()
+        self._last_read_timestamp = datetime.now(timezone.utc).timestamp()
+    
 
 class RegisterValue(BaseValue):
     """16bit integer for modbus registers"""
 
     def __init__(self, unsign_int: int = None):
-
-        self.validate(unsign_int)
-        self.value = unsign_int
-        self.timestamp = None
-        self._changed: bool = None
+        super().__init__(unsign_int)
 
     def __repr__(self):
         return str(self.signed)
@@ -96,10 +116,7 @@ class RegisterValue(BaseValue):
 class CoilValue(BaseValue):
 
     def __init__(self, value: bool = None):
-        self.validate(value)
-        self.value = value
-        self.timestamp = None
-        self._changed: bool = None
+        super().__init__(value)
 
     def validate(self, value: bool | int | None):
         if value is None:
