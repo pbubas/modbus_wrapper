@@ -53,9 +53,9 @@ class AsyncModbusBaseClientWrapper(ModbusBaseClientWrapper):
             results = asyncio.gather(*tasks)
             await results
 
-    async def write(self, modbus_numbers_with_values: dict) -> dict:
+    async def write(self, modbus_numbers_with_values: dict, unit: int = 0) -> dict:
         modbus_objects = [
-            get_modbus_object(n, v) for n, v in modbus_numbers_with_values.items()
+            get_modbus_object(n, v, unit) for n, v in modbus_numbers_with_values.items()
         ]
 
         await self.write_modbus_objects(modbus_objects)
