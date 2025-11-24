@@ -13,8 +13,7 @@ class BaseValue(ABC):
         self.validate(value)
         self.value: int | bool | None = value
         self.changed: bool = None
-        self._update_last_read_time()
-
+        self._error: str | None = None
 
     @abstractmethod
     def __repr__(self):
@@ -30,8 +29,14 @@ class BaseValue(ABC):
     def __bool__(self):
         return False if self.value is None else True
 
-    def update(self, new_value: int | bool | None):
+    def update(self, new_value: int | bool | None, error_message: str | None = None):
         """method to update collected value, None values are ignored"""
+
+        if error_message:
+            self.error = error_message
+        else:
+            self.error = None
+
         if new_value == None:
             self.changed = False
             self.value = None
@@ -68,17 +73,37 @@ class BaseValue(ABC):
     def timestamp(self):
         return self._last_read_time
     
+    @timestamp.setter
+    def timestamp(self, timestamp: str):
+        self._last_read_time = timestamp
+    
     @property
     def last_read_time(self):
         return self._last_read_time
+    
+    @last_read_time.setter
+    def last_read_time(self, last_read_time: str):
+        self._last_read_time = last_read_time
     
     @property
     def last_read_timestamp(self):
         return self._last_read_timestamp
     
+    @last_read_timestamp.setter
+    def last_read_timestamp(self, last_read_timestamp: float):
+        self._last_read_timestamp = last_read_timestamp
+    
     def _update_last_read_time(self):
         self._last_read_time = datetime.now(timezone.utc).isoformat()
         self._last_read_timestamp = datetime.now(timezone.utc).timestamp()
+
+    @property
+    def error(self):
+        return self._error
+    
+    @error.setter
+    def error(self, error_message: str | None):
+        self._error = error_message
     
 
 class RegisterValue(BaseValue):

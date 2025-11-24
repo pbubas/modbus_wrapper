@@ -43,6 +43,10 @@ class ModbusObject:
         first_modbus_number = self.MOBUS_NUMBER_RANGE[0]
         return self.number - first_modbus_number
 
+    @property
+    def read(self):
+        return self.current
+
 
 class Coil(ModbusObject):
     """Coil modbus object"""

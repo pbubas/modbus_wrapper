@@ -154,17 +154,19 @@ class ModbusBaseClientWrapper:
         function_string: str,
     ) -> None:
 
-        write_error = write_response.isError()
+        error_msg = self.get_errror_message_from_response(write_response)
 
-        if not write_error:
-            [obj.current.update(obj.write.value) for obj in write_argument.objects]
-        else:
+        if error_msg:
             LOG.error(
-                f'failed to write "{function_string}" for argument: "{write_argument}"'
+                f'failed to write "{function_string}" for argument: "{write_argument} - {error_msg}"'
             )
-            return
 
-        return not write_error
+        for obj in write_argument.objects:
+            if not error_msg:
+                obj.write.update(obj.write.value, error_msg)
+                obj.current.update(obj.write.value)
+            else:
+                obj.write.update(None, error_msg)
 
     def _write(self, write_argument: WriteFunctionArgument):
         write_function = self._get_function(write_argument.write_function_code)
@@ -198,14 +200,16 @@ class ModbusBaseClientWrapper:
 
         LOG.debug(f'results: "{collected_values[argument.starting_address]}"')
 
+        error_msg = self.get_errror_message_from_response(read_result)
+
         if (
-            not collected_values[argument.starting_address] or read_result.isError()
+            not collected_values[argument.starting_address] or error_msg
         ):  # None means no reply from modbus target
-            LOG.error(f"{function_string} failed to read {argument}")
+            LOG.error(f"{function_string} failed to read {argument} - {error_msg}")
             collected_values[argument.starting_address] = [
                 None for i in range(0, argument.size)
             ]  # Fill all results with None, when no reply from Modbus target
-            return
+
 
         increment = 0
         for value in collected_values[argument.starting_address]:
@@ -213,7 +217,8 @@ class ModbusBaseClientWrapper:
             increment += 1
 
         for object in argument.objects:
-            object.current.update(collected_values[object.address])
+            object.current.update(collected_values[object.address], error_msg)
+
         return True
 
     def _read(self, argument: ReadFunctionArgument) -> None:
@@ -267,3 +272,43 @@ class ModbusBaseClientWrapper:
         self, modbus_objects: List[ModbusObject]
     ) -> dict:
         return {obj.__repr__(): obj.current.__repr__() for obj in modbus_objects}
+
+    @staticmethod
+    def get_errror_message_from_response(response: ModbusPDU) -> str:
+        if response.isError():
+            function_code = response.function_code
+            exception_code = response.exception_code
+            
+            # Map function codes to their meanings (error bit is set, so subtract 128 for original function)
+            original_function_code = function_code - 128 if function_code > 128 else function_code
+            function_descriptions = {
+                1: "Read Coils",
+                2: "Read Discrete Inputs",
+                3: "Read Holding Registers",
+                4: "Read Input Registers",
+                5: "Write Single Coil",
+                6: "Write Single Register",
+                15: "Write Multiple Coils",
+                16: "Write Multiple Registers"
+            }
+            
+            function_name = function_descriptions.get(original_function_code, f"Function {original_function_code}")
+            
+            # Map exception codes to their meanings
+            exception_descriptions = {
+                1: "Illegal Function",
+                2: "Illegal Data Address",
+                3: "Illegal Data Value",
+                4: "Slave Device Failure",
+                5: "Acknowledge",
+                6: "Slave Device Busy",
+                7: "Memory Parity Error",
+                8: "Gateway Path Unavailable",
+                10: "Gateway Target Device Failed to Respond",
+                0: "Unknown Error (non-standard exception code)"
+            }
+            
+            exception_name = exception_descriptions.get(exception_code, f"Unknown Exception Code ({exception_code})")
+            
+            return f"Exception in {function_name} (code {function_code}/{exception_code}): {exception_name}"
+        return None
