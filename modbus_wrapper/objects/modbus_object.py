@@ -20,12 +20,13 @@ class ModbusObject:
     """Modbus object basic class"""
 
     def __init__(
-        self, modbus_number: int, value_to_write: int | bool = None, unit: int = 0
+        self, modbus_number: int, value_to_write: int | bool = None, unit: int = 0, description: str = ""
     ):
         self.number = modbus_number
         self.current = self.VALUE_CLS()
         self.write = self.VALUE_CLS(value_to_write)
         self.unit = unit
+        self.description = description
         self._validate_unit()
 
     def __repr__(self):
